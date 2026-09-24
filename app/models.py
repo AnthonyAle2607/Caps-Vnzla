@@ -1,4 +1,4 @@
-"""Database models for the CAPS VNZLA catalog."""
+"""Modelos de base de datos del catálogo CAPS VNZLA."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ producto_etiqueta = db.Table(
 
 
 class Categoria(db.Model):
-    """Represents a product category used to filter the catalog."""
+    """Representa una categoría usada para filtrar el catálogo."""
 
     __tablename__ = "categorias"
 
@@ -22,7 +22,7 @@ class Categoria(db.Model):
     productos = db.relationship("Producto", backref="categoria", lazy=True)
 
     def to_dict(self) -> dict:
-        """Return a public representation of the category."""
+        """Devuelve una representación pública de la categoría."""
         return {
             "id": self.id,
             "nombre": self.nombre,
@@ -31,7 +31,7 @@ class Categoria(db.Model):
 
 
 class Etiqueta(db.Model):
-    """Label used to tag products with properties such as "NUEVO" or "LIMITADO"."""
+    """Etiqueta productos con propiedades como «NUEVO» o «LIMITADO»."""
 
     __tablename__ = "etiquetas"
 
@@ -40,7 +40,7 @@ class Etiqueta(db.Model):
     slug = db.Column(db.String(80), unique=True, nullable=False)
 
     def to_dict(self) -> dict:
-        """Return a basic dictionary representation of the label."""
+        """Devuelve una representación básica de la etiqueta."""
         return {
             "id": self.id,
             "nombre": self.nombre,
@@ -49,7 +49,7 @@ class Etiqueta(db.Model):
 
 
 class Producto(db.Model):
-    """Catalog product information and its relationship with images and categories."""
+    """Información del producto y sus relaciones con imágenes y categorías."""
 
     __tablename__ = "productos"
 
@@ -75,14 +75,14 @@ class Producto(db.Model):
     )
 
     def primary_image(self) -> str:
-        """Return the primary image URL or a placeholder if not defined."""
+        """Devuelve la URL principal o un marcador si no existe una imagen."""
         for image in self.imagenes:
             if image.es_principal:
                 return image.url_imagen
         return "/static/img/placeholder.svg"
 
     def to_dict(self) -> dict:
-        """Return a JSON-safe representation for the catalog and API."""
+        """Devuelve una representación compatible con JSON para el catálogo y la API."""
         return {
             "id": self.id,
             "codigo": self.codigo,
@@ -99,7 +99,7 @@ class Producto(db.Model):
 
 
 class ImagenProducto(db.Model):
-    """Image associated with a product, including the preferred main image."""
+    """Imagen asociada a un producto, incluida la imagen principal."""
 
     __tablename__ = "imagenes_producto"
 
@@ -109,7 +109,7 @@ class ImagenProducto(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey("productos.id"), nullable=False)
 
     def to_dict(self) -> dict:
-        """Return the basic image metadata for display or serialization."""
+        """Devuelve los metadatos básicos para mostrar o serializar la imagen."""
         return {
             "id": self.id,
             "url_imagen": self.url_imagen,

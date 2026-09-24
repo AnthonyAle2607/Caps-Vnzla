@@ -1,4 +1,4 @@
-"""Catalog and storefront routes for the CAPS VNZLA web app."""
+"""Rutas del catálogo y storefront web de CAPS VNZLA."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ catalog_bp = Blueprint("catalog", __name__)
 
 @catalog_bp.route("/")
 def index() -> str:
-    """Render the public storefront home page.
+    """Renderiza la página pública principal de la tienda.
 
-    Returns the page shell plus the product list in JSON form so the frontend can
-    render it dynamically with filters, search and currency conversion.
+    Entrega la estructura de la página y los productos en JSON para que el
+    frontend los renderice dinámicamente con filtros, búsqueda y conversión.
     """
     categories = Categoria.query.order_by(Categoria.nombre).all()
     products = Producto.query.filter_by(activo=True).order_by(Producto.id).all()
@@ -33,7 +33,7 @@ def index() -> str:
 
 @catalog_bp.route("/producto/<int:producto_id>")
 def product_detail(producto_id: int) -> str:
-    """Render a product detail page with description, pricing and stock."""
+    """Renderiza el detalle de un producto con descripción, precio y stock."""
     product = Producto.query.get_or_404(producto_id)
     return render_template(
         "catalog/product_detail.html",
@@ -44,7 +44,7 @@ def product_detail(producto_id: int) -> str:
 
 @catalog_bp.route("/api/productos")
 def get_productos():
-    """Return a JSON list of active products filtered by category or text query."""
+    """Devuelve productos activos filtrados por categoría o texto."""
     categoria_id = request.args.get("categoria_id", type=int)
     busqueda = request.args.get("q", default="", type=str)
 
@@ -62,5 +62,5 @@ def get_productos():
 
 @catalog_bp.route("/api/moneda")
 def get_currency() -> tuple:
-    """Expose the exchange rate to the frontend without hardcoding it in JS."""
+    """Expone la tasa de cambio al frontend sin fijarla directamente en JavaScript."""
     return jsonify({"bs_per_usd": current_app.config["CURRENCY_RATE_BS"]})

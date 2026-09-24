@@ -1,4 +1,4 @@
-"""Configuration values for the CAPS VNZLA web application."""
+"""Valores de configuración de la aplicación web CAPS VNZLA."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Config:
-    """Central application configuration.
+    """Configuración central de la aplicación.
 
-    Secrets, database connection and currency settings are loaded from the
-    environment to keep the project portable and secure.
+    Los secretos, la conexión de base de datos y la tasa de cambio se cargan
+    desde el entorno para mantener el proyecto portable y seguro.
     """
 
     SECRET_KEY = os.getenv("SECRET_KEY", "caps-vnzla-dev-secret")

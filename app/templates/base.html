@@ -10,16 +10,16 @@
   <body>
     <header class="site-header">
       <nav class="nav container" aria-label="Navegación principal">
-        <a href="{{ url_for('catalog.index') }}" class="brand" aria-label="Ir al inicio">
-          <span class="brand-mark">RR</span>
-          CAPS VNZLA
+        <a href="{{ url_for('catalog.index') }}#inicio" class="brand" aria-label="Ir al inicio">
+          <img class="brand-logo" src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logo de CAPS VNZLA" />
+          <span>CAPS VNZLA</span>
         </a>
 
         <ul class="nav-links" aria-label="Menú principal">
-          <li><a href="#catalog">Catálogo</a></li>
-          <li><a href="#featured">Novedades</a></li>
-          <li><a href="#shop">Colecciones</a></li>
-          <li><a href="#contact">Contacto</a></li>
+          <li><a href="{{ url_for('catalog.index') }}#catalog">Catálogo</a></li>
+          <li><a href="{{ url_for('catalog.index') }}#inicio">Novedades</a></li>
+          <li><a href="{{ url_for('catalog.index') }}#shop">Colecciones</a></li>
+          <li><a href="{{ url_for('catalog.index') }}#contact">Contacto</a></li>
         </ul>
 
         <div class="nav-actions">
@@ -27,8 +27,11 @@
             <button type="button" class="currency-btn active" data-currency="USD">USD</button>
             <button type="button" class="currency-btn" data-currency="BS">BS</button>
           </div>
-          <button type="button" class="cart-toggle" id="cart-toggle" aria-label="Abrir carrito">
-            Carrito
+          <button type="button" class="cart-toggle" id="cart-toggle" aria-label="Abrir carrito de compras">
+            <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20.5 8H6.2M10 20a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm9 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
+            </svg>
+            <span class="cart-label">Carrito</span>
             <span id="cart-count">0</span>
           </button>
         </div>

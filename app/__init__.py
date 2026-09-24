@@ -1,4 +1,4 @@
-"""Flask application factory for the CAPS VNZLA catalog."""
+"""Fábrica de aplicación Flask para el catálogo de CAPS VNZLA."""
 
 from __future__ import annotations
 
@@ -15,21 +15,21 @@ from app.config import Config
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-# Shared database and migration instances used across the app.
+# Instancias compartidas de base de datos y migraciones usadas por la aplicación.
 db = SQLAlchemy()
 migrate = Migrate()
 
 
 def create_app() -> Flask:
-    """Create and configure the Flask application.
+    """Crea y configura la aplicación Flask.
 
-    The factory keeps the configuration centralized, allows testing with custom
-    settings and ensures the database schema is created before the first request.
+    La fábrica centraliza la configuración, permite pruebas con ajustes
+    personalizados y garantiza que el esquema exista antes de atender solicitudes.
     """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
 
-    # Keep environment variables in sync with runtime configuration.
+    # Mantiene las variables de entorno sincronizadas con la configuración activa.
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", app.config["SECRET_KEY"])
     app.config["CURRENCY_RATE_BS"] = float(
         os.getenv("CURRENCY_RATE_BS", app.config["CURRENCY_RATE_BS"])
@@ -50,7 +50,7 @@ def create_app() -> Flask:
 
 
 def seed_data() -> None:
-    """Populate the database with starter catalog data when no products exist."""
+    """Carga datos iniciales cuando la base de datos aún no tiene catálogo."""
     from app.models import Categoria, ImagenProducto, Producto
 
     if Categoria.query.first() is not None:

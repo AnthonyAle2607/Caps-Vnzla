@@ -3,7 +3,7 @@
 {% block title %}Catálogo | CAPS VNZLA{% endblock %}
 
 {% block content %}
-  <section class="hero container" id="featured">
+  <section class="hero container" id="inicio">
     <div class="hero__content">
       <p class="eyebrow">Colección premium</p>
       <h1>Gorras que marcan presencia.</h1>
@@ -51,7 +51,27 @@
       {% endfor %}
     </div>
 
-    <div id="product-grid" class="product-grid" aria-live="polite"></div>
+    <div class="product-carousel" data-carousel aria-label="Carrusel de productos">
+      <button type="button" class="carousel-control carousel-control--prev" data-carousel-prev aria-label="Producto anterior">‹</button>
+      <div class="product-carousel__viewport">
+        <div id="product-grid" class="product-grid" aria-live="polite"></div>
+      </div>
+      <button type="button" class="carousel-control carousel-control--next" data-carousel-next aria-label="Producto siguiente">›</button>
+    </div>
+    <p class="carousel-hint">Desliza para explorar la colección</p>
+  </section>
+
+  <section class="collections container" id="shop">
+    <p class="eyebrow">Colecciones</p>
+    <h2>Diseños para cada actitud.</h2>
+    <p>Descubre piezas Urban, Classic y Team creadas para acompañar tu estilo todos los días.</p>
+  </section>
+
+  <section class="contact container" id="contact">
+    <p class="eyebrow">Contacto</p>
+    <h2>¿Tienes alguna pregunta?</h2>
+    <p>Escríbenos para recibir asesoría sobre tallas, disponibilidad y entregas.</p>
+    <a class="cta-button" href="mailto:hola@capsvnzla.com">Contactar ahora</a>
   </section>
 
   <script>

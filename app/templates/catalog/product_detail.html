@@ -28,7 +28,7 @@
   </section>
 
   <script>
-    window.catalogData = [{% for product_item in [product] %}{{ product_item.to_dict() | tojson | safe }}{% endfor %}];
+    window.catalogData = [{{ product.to_dict() | tojson | safe }}];
     window.currencyRate = {{ currency_rate }};
   </script>
 {% endblock %}

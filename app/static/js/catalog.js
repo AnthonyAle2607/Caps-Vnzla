@@ -1,8 +1,8 @@
 /**
- * Front-end catalog logic for CAPS VNZLA.
+ * Lógica del catálogo frontend de CAPS VNZLA.
  *
- * This module handles product rendering, category filtering, live search,
- * USD/BS conversion and the cart behavior in a single place.
+ * Este módulo controla el renderizado de productos, los filtros, la búsqueda,
+ * la conversión USD/BS, el carrusel y el comportamiento del carrito.
  */
 
 const productData = Array.isArray(window.catalogData) ? window.catalogData : [];
@@ -12,10 +12,15 @@ const state = {
   rate: Number(window.currencyRate || 35),
   cart: loadCart(),
   activeCategory: "all",
+  carouselTimer: null,
+  carouselIndex: 0,
+  isDragging: false,
+  dragStartX: 0,
+  dragStartScrollLeft: 0,
 };
 
 /**
- * Load saved cart data from localStorage.
+ * Carga el carrito guardado en localStorage.
  *
  * @returns {Array<{id: number, name: string, price_usd: number, quantity: number}>}
  */
@@ -24,24 +29,24 @@ function loadCart() {
     const raw = localStorage.getItem(cartStorageKey);
     return raw ? JSON.parse(raw) : [];
   } catch (error) {
-    console.warn("Cart could not be loaded from localStorage:", error);
+    console.warn("No se pudo cargar el carrito desde localStorage:", error);
     return [];
   }
 }
 
 /**
- * Persist cart state so the order remains between sessions.
+ * Guarda el estado del carrito para conservar la orden entre sesiones.
  */
 function saveCart() {
   localStorage.setItem(cartStorageKey, JSON.stringify(state.cart));
 }
 
 /**
- * Format a numeric value for the active currency.
+ * Formatea un valor numérico en la moneda activa.
  *
- * @param {number} value - raw value in USD.
- * @param {string} currency - target currency, either USD or BS.
- * @returns {string}
+ * @param {number} value - Valor base en dólares.
+ * @param {string} currency - Moneda destino: USD o BS.
+ * @returns {string} Precio listo para mostrar.
  */
 function formatMoney(value, currency = state.currency) {
   const numericValue = Number(value || 0);
@@ -54,17 +59,17 @@ function formatMoney(value, currency = state.currency) {
 }
 
 /**
- * Convert a USD price into the selected currency.
+ * Convierte un precio en dólares a la moneda seleccionada.
  *
- * @param {number} priceUsd - product price in USD.
- * @returns {number}
+ * @param {number} priceUsd - Precio del producto en dólares.
+ * @returns {number} Precio convertido.
  */
 function convertPrice(priceUsd) {
   return state.currency === "BS" ? Number(priceUsd) * state.rate : Number(priceUsd);
 }
 
 /**
- * Update the visible currency label and render the cart again.
+ * Actualiza la moneda visible y vuelve a renderizar los componentes dependientes.
  */
 function updateCurrencyUI() {
   const buttons = document.querySelectorAll(".currency-btn");
@@ -79,7 +84,7 @@ function updateCurrencyUI() {
 }
 
 /**
- * Return products filtered by category and search term.
+ * Devuelve los productos filtrados por categoría y texto de búsqueda.
  *
  * @returns {Array<Object>}
  */
@@ -98,9 +103,9 @@ function getVisibleProducts() {
 }
 
 /**
- * Render the product list in the main catalog grid.
+ * Renderiza los productos dentro del carrusel principal.
  *
- * @param {Array<Object>} products - product list to display.
+ * @param {Array<Object>} products - Lista de productos que se mostrará.
  */
 function renderProducts(products) {
   const container = document.getElementById("product-grid");
@@ -143,12 +148,93 @@ function renderProducts(products) {
       `,
     )
     .join("");
+  state.carouselIndex = 0;
+  configureCarousel();
 }
 
 /**
- * Add a product to the cart or increment its quantity if it already exists.
+ * Avanza el carrusel una tarjeta y vuelve al inicio al llegar al final.
  *
- * @param {number} productId - product identifier.
+ * @param {number} direction - Dirección: 1 para avanzar y -1 para retroceder.
+ */
+function moveCarousel(direction) {
+  const viewport = document.querySelector(".product-carousel__viewport");
+  const cards = document.querySelectorAll(".product-card");
+  if (!viewport || cards.length === 0) {
+    return;
+  }
+
+  state.carouselIndex = (state.carouselIndex + direction + cards.length) % cards.length;
+  cards[state.carouselIndex].scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+    inline: "start",
+  });
+}
+
+/**
+ * Reinicia el avance automático del carrusel.
+ */
+function restartCarouselTimer() {
+  window.clearInterval(state.carouselTimer);
+  state.carouselTimer = window.setInterval(() => moveCarousel(1), 4500);
+}
+
+/**
+ * Configura controles, autoplay y arrastre táctil o con ratón.
+ */
+function configureCarousel() {
+  const carousel = document.querySelector("[data-carousel]");
+  const viewport = document.querySelector(".product-carousel__viewport");
+  if (!carousel || !viewport || carousel.dataset.ready === "true") {
+    restartCarouselTimer();
+    return;
+  }
+
+  carousel.dataset.ready = "true";
+  const previousButton = carousel.querySelector("[data-carousel-prev]");
+  const nextButton = carousel.querySelector("[data-carousel-next]");
+  if (previousButton) {
+    previousButton.addEventListener("click", () => {
+      moveCarousel(-1);
+      restartCarouselTimer();
+    });
+  }
+  if (nextButton) {
+    nextButton.addEventListener("click", () => {
+      moveCarousel(1);
+      restartCarouselTimer();
+    });
+  }
+
+  viewport.addEventListener("pointerdown", (event) => {
+    state.isDragging = true;
+    state.dragStartX = event.clientX;
+    state.dragStartScrollLeft = viewport.scrollLeft;
+    viewport.setPointerCapture(event.pointerId);
+  });
+  viewport.addEventListener("pointermove", (event) => {
+    if (!state.isDragging) {
+      return;
+    }
+    viewport.scrollLeft = state.dragStartScrollLeft - (event.clientX - state.dragStartX);
+  });
+  viewport.addEventListener("pointerup", () => {
+    state.isDragging = false;
+    restartCarouselTimer();
+  });
+  viewport.addEventListener("pointercancel", () => {
+    state.isDragging = false;
+    restartCarouselTimer();
+  });
+
+  restartCarouselTimer();
+}
+
+/**
+ * Agrega un producto al carrito o incrementa su cantidad si ya existe.
+ *
+ * @param {number} productId - Identificador del producto.
  */
 function addToCart(productId) {
   const product = productData.find((item) => Number(item.id) === Number(productId));
@@ -174,10 +260,10 @@ function addToCart(productId) {
 }
 
 /**
- * Remove or decrement an item in the cart.
+ * Elimina o reduce la cantidad de un artículo del carrito.
  *
- * @param {number} productId - product identifier.
- * @param {string} action - action to perform: increase or decrease.
+ * @param {number} productId - Identificador del producto.
+ * @param {string} action - Acción: increase o decrease.
  */
 function adjustCartItem(productId, action) {
   const item = state.cart.find((entry) => Number(entry.id) === Number(productId));
@@ -199,7 +285,7 @@ function adjustCartItem(productId, action) {
 }
 
 /**
- * Update the cart panel totals and rendered items.
+ * Actualiza los artículos y totales visibles del carrito.
  */
 function updateCartDisplay() {
   const cartItems = document.getElementById("cart-items");
@@ -249,7 +335,7 @@ function updateCartDisplay() {
 }
 
 /**
- * Attach event listeners to the UI after the DOM loads.
+ * Conecta los eventos de interacción después de cargar el DOM.
  */
 function bindEvents() {
   const searchInput = document.getElementById("catalog-search");
@@ -262,6 +348,7 @@ function bindEvents() {
   if (searchInput) {
     searchInput.addEventListener("input", () => {
       renderProducts(getVisibleProducts());
+      restartCarouselTimer();
     });
   }
 
@@ -272,6 +359,7 @@ function bindEvents() {
         btn.classList.toggle("active", btn === button);
       });
       renderProducts(getVisibleProducts());
+      restartCarouselTimer();
     });
   });
 
@@ -316,7 +404,7 @@ function bindEvents() {
 }
 
 /**
- * Initialize the catalog and the cart on page load.
+ * Inicializa el catálogo y el carrito cuando carga la página.
  */
 function initCatalog() {
   renderProducts(getVisibleProducts());
