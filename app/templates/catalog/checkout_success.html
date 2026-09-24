@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedido creado | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="checkout-page container">
+    <div class="checkout-card checkout-card--success">
+      <p class="eyebrow">Pedido #{{ pedido.id }}</p>
+      <h1>¡Recibimos tu solicitud!</h1>
+      <p class="lead">Tu pedido fue registrado y el stock fue actualizado. Continúa en WhatsApp para coordinar los detalles.</p>
+      <div class="detail-actions">
+        <a class="cta-button" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Abrir WhatsApp</a>
+        <a class="secondary-button" href="{{ url_for('catalog.index') }}">Volver a la tienda</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    localStorage.removeItem("caps_vnzla_cart");
+  </script>
+{% endblock %}

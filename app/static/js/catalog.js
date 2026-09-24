@@ -148,6 +148,7 @@ function renderProducts(products) {
       `,
     )
     .join("");
+  bindAddToCartButtons(container);
   state.carouselIndex = 0;
   configureCarousel();
 }
@@ -165,10 +166,14 @@ function moveCarousel(direction) {
   }
 
   state.carouselIndex = (state.carouselIndex + direction + cards.length) % cards.length;
-  cards[state.carouselIndex].scrollIntoView({
+  const activeCard = cards[state.carouselIndex];
+  const viewportBounds = viewport.getBoundingClientRect();
+  const cardBounds = activeCard.getBoundingClientRect();
+  const horizontalOffset = cardBounds.left - viewportBounds.left + viewport.scrollLeft;
+
+  viewport.scrollTo({
+    left: horizontalOffset,
     behavior: "smooth",
-    block: "nearest",
-    inline: "start",
   });
 }
 
@@ -208,6 +213,12 @@ function configureCarousel() {
   }
 
   viewport.addEventListener("pointerdown", (event) => {
+    if (
+      event.target instanceof Element
+      && event.target.closest("a, button, input, label")
+    ) {
+      return;
+    }
     state.isDragging = true;
     state.dragStartX = event.clientX;
     state.dragStartScrollLeft = viewport.scrollLeft;
@@ -232,6 +243,23 @@ function configureCarousel() {
 }
 
 /**
+ * Conecta una sola vez los botones de añadir al carrito.
+ *
+ * @param {Element|Document} root - Contenedor donde se buscarán los botones.
+ */
+function bindAddToCartButtons(root) {
+  root.querySelectorAll("[data-add-to-cart]").forEach((button) => {
+    if (button.dataset.cartBound === "true") {
+      return;
+    }
+    button.dataset.cartBound = "true";
+    button.addEventListener("click", () => {
+      addToCart(button.dataset.addToCart);
+    });
+  });
+}
+
+/**
  * Agrega un producto al carrito o incrementa su cantidad si ya existe.
  *
  * @param {number} productId - Identificador del producto.
@@ -243,20 +271,28 @@ function addToCart(productId) {
   }
 
   const existingItem = state.cart.find((item) => Number(item.id) === Number(product.id));
+  const selectedColor = document.querySelector('input[name="product-color"]:checked');
+  const color = selectedColor ? selectedColor.value : (product.colores?.[0]?.nombre || "");
 
   if (existingItem) {
     existingItem.quantity += 1;
+    existingItem.color = color || existingItem.color;
   } else {
     state.cart.push({
       id: Number(product.id),
       name: product.nombre,
       price_usd: Number(product.precio_usd),
       quantity: 1,
+      color,
     });
   }
 
   saveCart();
   updateCartDisplay();
+  const feedback = document.getElementById("detail-cart-feedback");
+  if (feedback) {
+    feedback.textContent = `${product.nombre} fue añadido al carrito.`;
+  }
 }
 
 /**
@@ -317,6 +353,7 @@ function updateCartDisplay() {
         <div class="cart-item">
           <div class="cart-item__info">
             <strong>${item.name}</strong>
+            ${item.color ? `<small>Color: ${item.color}</small>` : ""}
             <span>${formatMoney(convertPrice(item.price_usd))}</span>
           </div>
           <div class="cart-item__controls">
@@ -344,6 +381,8 @@ function bindEvents() {
   const cartToggle = document.getElementById("cart-toggle");
   const cartOverlay = document.getElementById("cart-overlay");
   const closeCartButton = document.getElementById("close-cart");
+  const checkoutButton = document.getElementById("checkout-button");
+  bindAddToCartButtons(document);
 
   if (searchInput) {
     searchInput.addEventListener("input", () => {
@@ -371,13 +410,12 @@ function bindEvents() {
   });
 
   document.addEventListener("click", (event) => {
-    const target = event.target;
-    const addButton = target.closest("[data-add-to-cart]");
-    const cartAction = target.closest("[data-cart-action]");
-
-    if (addButton) {
-      addToCart(addButton.dataset.addToCart);
+    if (!(event.target instanceof Element)) {
+      return;
     }
+
+    const target = event.target;
+    const cartAction = target.closest("[data-cart-action]");
 
     if (cartAction) {
       adjustCartItem(cartAction.dataset.productId, cartAction.dataset.cartAction);
@@ -399,6 +437,16 @@ function bindEvents() {
   if (closeCartButton) {
     closeCartButton.addEventListener("click", () => {
       document.body.classList.remove("cart-open");
+    });
+  }
+
+  if (checkoutButton) {
+    checkoutButton.addEventListener("click", () => {
+      if (!state.cart.length) {
+        window.alert("Agrega al menos un producto antes de procesar el pedido.");
+        return;
+      }
+      window.location.href = "/checkout";
     });
   }
 }

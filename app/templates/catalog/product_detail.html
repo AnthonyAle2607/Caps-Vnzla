@@ -17,13 +17,58 @@
         <span id="detail-price-bs" class="price-block__secondary">BS {{ (product.precio_usd * currency_rate) | round(2) }}</span>
       </div>
 
-      <p class="stock-status">Stock disponible: {{ product.stock }} unidades</p>
+      {% if product.stock > 0 and product.activo %}
+        <p class="stock-status">Disponible: {{ product.stock }} unidades</p>
+      {% else %}
+        <p class="stock-status stock-status--empty">Producto agotado</p>
+      {% endif %}
       <p class="product-description">{{ product.descripcion }}</p>
 
-      <div class="detail-actions">
-        <button type="button" class="cta-button" data-add-to-cart="{{ product.id }}">Añadir al carrito</button>
-        <a class="secondary-button" href="{{ url_for('catalog.index') }}">Volver al catálogo</a>
+      <div class="shipping-info">
+        <strong>Envíos</strong>
+        <p>Despachamos a toda Venezuela. Coordinamos la entrega por WhatsApp después de confirmar tu pedido.</p>
+        <span>Costo de envío: USD ${{ '%.2f'|format(shipping_cost) }} (configurable según la operación).</span>
       </div>
+
+      {% if product.colores %}
+        <fieldset class="color-picker">
+          <legend>Color disponible</legend>
+          <div class="color-options">
+            {% for color in product.colores %}
+              <label class="color-option">
+                <input type="radio" name="product-color" value="{{ color.nombre }}" {% if loop.first %}checked{% endif %} />
+                <span class="color-swatch" style="--swatch-color: {{ color.codigo_hex }};" aria-hidden="true"></span>
+                <span>{{ color.nombre }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+      {% endif %}
+
+      <div class="detail-actions">
+        <button type="button" class="cta-button" data-add-to-cart="{{ product.id }}" {% if product.stock < 1 or not product.activo %}disabled{% endif %}>Añadir al carrito</button>
+        <a class="secondary-button" href="{{ url_for('catalog.index') }}#catalog">Volver al catálogo</a>
+      </div>
+      <p class="cart-feedback" id="detail-cart-feedback" role="status"></p>
+    </div>
+  </section>
+
+  <section class="recommendations container">
+    <div class="recommendations__heading">
+      <p class="eyebrow">También te puede interesar</p>
+      <h2>Completa tu estilo</h2>
+    </div>
+    <div class="recommendations-grid">
+      {% for recommended in recommendations %}
+        <article class="recommendation-card">
+          <img src="{{ recommended.primary_image() }}" alt="{{ recommended.nombre }}" />
+          <div>
+            <p class="product-card__category">{{ recommended.categoria.nombre }}</p>
+            <h3>{{ recommended.nombre }}</h3>
+            <a class="secondary-button" href="{{ url_for('catalog.product_detail', producto_id=recommended.id) }}">Ver detalle</a>
+          </div>
+        </article>
+      {% endfor %}
     </div>
   </section>
 

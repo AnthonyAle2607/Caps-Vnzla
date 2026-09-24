@@ -148,6 +148,21 @@ Caps-Vnzla/
 
 Para ajustar la tasa de cambio, editar el archivo `.env` o la variable `CURRENCY_RATE_BS`.
 
+## Base de datos local y administración
+
+La aplicación usa SQLite como base local y SQLAlchemy como ORM. Al iniciar, crea
+las tablas que no existan y carga colecciones de demostración únicamente si no
+hay registros previos.
+
+- Catálogo público: `http://localhost:5000/`
+- Panel administrativo preliminar: `http://localhost:5000/admin/`
+- Checkout: `http://localhost:5000/checkout`
+- Plan técnico: [`docs/planificacion-base-datos.md`](docs/planificacion-base-datos.md)
+
+El panel administrativo actual es una vista de supervisión en modo lectura.
+Antes de habilitar operaciones de escritura debe incorporar autenticación,
+roles, protección CSRF, validación de formularios y auditoría.
+
 ## Posibles extensiones
 
 - panel administrativo,

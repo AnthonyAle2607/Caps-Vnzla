@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Movimientos de stock | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page container">
+    <div class="admin-heading">
+      <div><p class="eyebrow">Inventario</p><h1>Historial de movimientos</h1></div>
+      <a class="secondary-button" href="{{ url_for('admin.dashboard') }}">Volver al panel</a>
+    </div>
+    <section class="admin-panel">
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Antes</th><th>Después</th><th>Motivo</th></tr></thead>
+          <tbody>
+            {% for movement in movements %}
+              <tr><td>{{ movement.creado_en.strftime('%d/%m/%Y %H:%M') }}</td><td>{{ movement.producto.nombre }}</td><td>{{ movement.tipo }}</td><td>{{ movement.cantidad }}</td><td>{{ movement.stock_anterior }}</td><td>{{ movement.stock_nuevo }}</td><td>{{ movement.motivo }}</td></tr>
+            {% else %}
+              <tr><td colspan="7">Todavía no hay movimientos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+{% endblock %}

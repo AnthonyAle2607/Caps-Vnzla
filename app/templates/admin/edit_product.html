@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar producto | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="auth-page container">
+    <div class="admin-panel admin-form-card">
+      <p class="eyebrow">Inventario</p>
+      <h1>Editar {{ product.nombre }}</h1>
+      <form method="post" class="admin-form">
+        <label>Nombre<input name="nombre" value="{{ product.nombre }}" required /></label>
+        <label>Descripción<textarea name="descripcion" required>{{ product.descripcion }}</textarea></label>
+        <label>Precio USD<input type="number" name="precio_usd" min="0" step="0.01" value="{{ product.precio_usd }}" required /></label>
+        <label>Stock<input type="number" name="stock" min="0" step="1" value="{{ product.stock }}" required /></label>
+        <label>Categoría<select name="categoria_id">{% for category in categories %}<option value="{{ category.id }}" {% if category.id == product.categoria_id %}selected{% endif %}>{{ category.nombre }}</option>{% endfor %}</select></label>
+        <label class="checkbox-label"><input type="checkbox" name="activo" {% if product.activo %}checked{% endif %} /> Producto activo</label>
+        <div class="detail-actions"><button class="cta-button" type="submit">Guardar cambios</button><a class="secondary-button" href="{{ url_for('admin.dashboard') }}">Cancelar</a></div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

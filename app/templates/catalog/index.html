@@ -23,7 +23,7 @@
 
     <div class="hero__visual" aria-label="Imagen promocional de gorras">
       <div class="hero-card hero-card--main">
-        <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logotipo RR de CAPS VNZLA, presentado como elemento principal en la tarjeta promocional de la colección de gorras." />
+        <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logo de CAPS VNZLA" />
       </div>
       <div class="hero-card hero-card--small">
         <p>Nuevo drop</p>
@@ -51,20 +51,60 @@
       {% endfor %}
     </div>
 
-    <div class="product-carousel" data-carousel aria-label="Carrusel de productos">
-      <button type="button" class="carousel-control carousel-control--prev" data-carousel-prev aria-label="Producto anterior">‹</button>
-      <div class="product-carousel__viewport">
-        <div id="product-grid" class="product-grid" aria-live="polite"></div>
-      </div>
-      <button type="button" class="carousel-control carousel-control--next" data-carousel-next aria-label="Producto siguiente">›</button>
-    </div>
-    <p class="carousel-hint">Desliza para explorar la colección</p>
+<div
+  class="product-carousel"
+  data-carousel
+  aria-label="Carrusel de productos"
+>
+  <button
+    type="button"
+    class="carousel-control carousel-control--prev"
+    data-carousel-prev
+    aria-label="Producto anterior"
+  >
+    ‹
+  </button>
+
+  <div class="product-carousel__viewport">
+    <div
+      id="product-grid"
+      class="product-grid"
+      aria-live="polite"
+    ></div>
+  </div>
+
+  <button
+    type="button"
+    class="carousel-control carousel-control--next"
+    data-carousel-next
+    aria-label="Producto siguiente"
+  >
+    ›
+  </button>
+</div>
+
+<p class="carousel-hint">
+  Desliza para explorar la colección
+</p>
   </section>
 
   <section class="collections container" id="shop">
     <p class="eyebrow">Colecciones</p>
     <h2>Diseños para cada actitud.</h2>
-    <p>Descubre piezas Urban, Classic y Team creadas para acompañar tu estilo todos los días.</p>
+    <p>Descubre piezas creadas para acompañar tu estilo todos los días.</p>
+    <div class="collection-grid">
+      {% for collection in collections %}
+        <article class="collection-card">
+          <img src="{{ collection.imagen_url }}" alt="{{ collection.nombre }}" />
+          <div class="collection-card__body">
+            <p class="product-card__category">Caps Vnzla</p>
+            <h3>{{ collection.nombre }}</h3>
+            <p>{{ collection.descripcion }}</p>
+            <a class="secondary-button" href="#catalog">Explorar colección</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
   </section>
 
   <section class="contact container" id="contact">
@@ -74,8 +114,8 @@
     <a class="cta-button" href="mailto:hola@capsvnzla.com">Contactar ahora</a>
   </section>
 
-  <script>
-    window.catalogData = {{ products_json | safe }};
-    window.currencyRate = {{ currency_rate }};
-  </script>
+<script>
+  window.catalogData = {{ products_json | safe }};
+  window.currencyRate = {{ currency_rate }};
+</script>
 {% endblock %}

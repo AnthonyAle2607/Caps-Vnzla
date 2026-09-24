@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedidos | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page container">
+    <div class="admin-heading">
+      <div><p class="eyebrow">Ventas</p><h1>Pedidos registrados</h1></div>
+      <a class="secondary-button" href="{{ url_for('admin.dashboard') }}">Volver al panel</a>
+    </div>
+    <section class="admin-panel">
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Pedido</th><th>Cliente</th><th>Teléfono</th><th>Total USD</th><th>Estado</th><th>Creado</th></tr></thead>
+          <tbody>
+            {% for order in orders %}
+              <tr><td>#{{ order.id }}</td><td>{{ order.nombre_cliente }}</td><td>{{ order.telefono }}</td><td>${{ '%.2f'|format(order.total_usd) }}</td><td>{{ order.estado }}</td><td>{{ order.creado_en.strftime('%d/%m/%Y %H:%M') }}</td></tr>
+            {% else %}
+              <tr><td colspan="6">No hay pedidos registrados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Administración | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page container">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">Panel administrativo</p>
+        <h1>Control de tu catálogo</h1>
+        <p class="lead">Supervisa productos, categorías, colecciones y existencias.</p>
+      </div>
+      <div class="admin-heading__actions">
+        <a class="secondary-button" href="{{ url_for('admin.stock_movements') }}">Movimientos</a>
+        <a class="secondary-button" href="{{ url_for('admin.orders') }}">Pedidos ({{ order_count }})</a>
+        <a class="secondary-button" href="{{ url_for('catalog.index') }}">Volver a la tienda</a>
+        <a class="secondary-button" href="{{ url_for('admin.logout') }}">Cerrar sesión</a>
+      </div>
+    </div>
+
+    <div class="admin-stats">
+      <article class="admin-stat"><span>Productos</span><strong>{{ product_count }}</strong></article>
+      <article class="admin-stat"><span>Activos</span><strong>{{ active_product_count }}</strong></article>
+      <article class="admin-stat"><span>Categorías</span><strong>{{ category_count }}</strong></article>
+      <article class="admin-stat"><span>Colecciones</span><strong>{{ collection_count }}</strong></article>
+    </div>
+
+    <section class="admin-panel">
+      <div class="admin-panel__heading">
+        <div>
+          <p class="eyebrow">Inventario reciente</p>
+          <h2>Productos registrados</h2>
+        </div>
+        <span class="admin-badge">Sesión: {{ admin.usuario }}</span>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Stock</th><th>Estado</th><th>Acción</th></tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+              <tr>
+                <td>{{ product.nombre }}</td>
+                <td>{{ product.codigo }}</td>
+                <td>{{ product.categoria.nombre }}</td>
+                <td>{{ product.stock }}</td>
+                <td><span class="status-pill {{ 'status-pill--active' if product.activo else '' }}">{{ 'Activo' if product.activo else 'Inactivo' }}</span></td>
+                <td><a class="table-link" href="{{ url_for('admin.edit_product', producto_id=product.id) }}">Editar</a></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6">No hay productos registrados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-panel__heading">
+        <div><p class="eyebrow">Ventas</p><h2>Pedidos recientes</h2></div>
+        <a class="table-link" href="{{ url_for('admin.orders') }}">Ver todos</a>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Pedido</th><th>Cliente</th><th>Total USD</th><th>Estado</th><th>Fecha</th></tr></thead>
+          <tbody>
+            {% for order in orders %}
+              <tr><td>#{{ order.id }}</td><td>{{ order.nombre_cliente }}</td><td>${{ '%.2f'|format(order.total_usd) }}</td><td>{{ order.estado }}</td><td>{{ order.creado_en.strftime('%d/%m/%Y %H:%M') }}</td></tr>
+            {% else %}
+              <tr><td colspan="5">Todavía no hay pedidos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+{% endblock %}

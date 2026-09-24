@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Datos de compra | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="checkout-page container">
+    <div class="checkout-card">
+      <p class="eyebrow">Finalizar compra</p>
+      <h1>¿A dónde enviamos tu pedido?</h1>
+      <p class="lead">Completa tus datos. El costo de envío es USD ${{ '%.2f'|format(shipping_cost) }}. Al confirmar, te redirigiremos a WhatsApp para coordinar el pago y la entrega.</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <p class="form-message form-message--{{ category }}">{{ message }}</p>
+        {% endfor %}
+      {% endwith %}
+      <form method="post" class="admin-form" id="checkout-form">
+        <label>Nombre completo<input name="nombre_cliente" required autocomplete="name" /></label>
+        <label>Teléfono<input name="telefono" required autocomplete="tel" /></label>
+        <label>Correo electrónico<input type="email" name="correo" required autocomplete="email" /></label>
+        <label>Dirección de entrega<textarea name="direccion" required autocomplete="street-address"></textarea></label>
+        <label>Referencia (opcional)<input name="referencia" /></label>
+        <input type="hidden" name="cart" id="checkout-cart" />
+        <button class="cta-button" type="submit">Confirmar y continuar a WhatsApp</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    document.getElementById("checkout-cart").value = localStorage.getItem("caps_vnzla_cart") || "[]";
+  </script>
+{% endblock %}
