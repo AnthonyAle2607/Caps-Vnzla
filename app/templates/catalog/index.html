@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="hero container" id="featured">
+    <div class="hero__content">
+      <p class="eyebrow">Colección premium</p>
+      <h1>Gorras que marcan presencia.</h1>
+      <p class="lead">
+        Diseños urbanos, calidad premium y estilo auténtico para romper con la rutina.
+      </p>
+      <div class="hero__actions">
+        <a href="#catalog" class="cta-button">Comprar ahora</a>
+        <a href="#shop" class="secondary-button">Ver colecciones</a>
+      </div>
+      <ul class="hero__stats">
+        <li><strong>2.4k+</strong><span>Compras</span></li>
+        <li><strong>24h</strong><span>Envío</span></li>
+        <li><strong>4.9/5</strong><span>Valoración</span></li>
+      </ul>
+    </div>
+
+    <div class="hero__visual" aria-label="Imagen promocional de gorras">
+      <div class="hero-card hero-card--main">
+        <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logotipo RR de CAPS VNZLA, presentado como elemento principal en la tarjeta promocional de la colección de gorras." />
+      </div>
+      <div class="hero-card hero-card--small">
+        <p>Nuevo drop</p>
+        <strong>StreetWear</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="catalog container" id="catalog">
+    <div class="catalog-header">
+      <div>
+        <p class="eyebrow">Catálogo oficial</p>
+        <h2>Explora la colección</h2>
+      </div>
+      <label class="search-box" for="catalog-search">
+        <span>Buscar</span>
+        <input id="catalog-search" type="search" placeholder="Nombre del producto" />
+      </label>
+    </div>
+
+    <div class="catalog-filters" id="category-filters" aria-label="Filtros por categoría">
+      <button type="button" class="filter-btn active" data-category-id="all">Todo</button>
+      {% for category in categories %}
+        <button type="button" class="filter-btn" data-category-id="{{ category.id }}">{{ category.nombre }}</button>
+      {% endfor %}
+    </div>
+
+    <div id="product-grid" class="product-grid" aria-live="polite"></div>
+  </section>
+
+  <script>
+    window.catalogData = {{ products_json | safe }};
+    window.currencyRate = {{ currency_rate }};
+  </script>
+{% endblock %}

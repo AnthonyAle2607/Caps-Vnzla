@@ -1,0 +1,338 @@
+import os
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfgen import canvas
+
+# Define custom Canvas for Running Header and Footer with Page Numbers
+class NumberedCanvas(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        super(NumberedCanvas, self).__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations(num_pages)
+            super(NumberedCanvas, self).showPage()
+        super(NumberedCanvas, self).save()
+
+    def draw_page_decorations(self, page_count):
+        self.saveState()
+        self.setFont("Helvetica", 8)
+        self.setFillColor(colors.HexColor("#64748b"))
+
+        # Footer (skip page number on page 1 if needed, or keep uniform)
+        page_text = f"Página {self._pageNumber} de {page_count}"
+        self.drawRightString(612 - 54, 36, page_text)
+        self.drawString(54, 36, "Caps-Vnzla — Arquitectura y Guía de Desarrollo")
+        
+        # Top Rule / Header for pages > 1
+        if self._pageNumber > 1:
+            self.setStrokeColor(colors.HexColor("#e2e8f0"))
+            self.setLineWidth(0.5)
+            self.line(54, 792 - 36, 612 - 54, 792 - 36)
+            self.drawString(54, 792 - 30, "Documentación Técnica — Catálogo Interactivo en Python")
+            
+        self.restoreState()
+
+def create_catalog_doc(filename="Arquitectura_Catalogo_Python.pdf"):
+    # Page setup: Letter size, 0.75 in margins
+    doc = SimpleDocTemplate(
+        filename,
+        pagesize=letter,
+        leftMargin=54,
+        rightMargin=54,
+        topMargin=54,
+        bottomMargin=54
+    )
+
+    styles = getSampleStyleSheet()
+
+    # Custom Palette
+    c_primary = colors.HexColor("#0f172a")    # Dark Slate
+    c_secondary = colors.HexColor("#2563eb")  # Vibrant Blue
+    c_text = colors.HexColor("#334155")       # Charcoal
+    c_bg_code = colors.HexColor("#f8fafc")    # Light Neutral
+    c_border = colors.HexColor("#cbd5e1")     # Light Slate Border
+
+    # Custom Typography Styles
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        leading=26,
+        textColor=c_primary,
+        spaceAfter=6
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=11,
+        leading=15,
+        textColor=c_secondary,
+        spaceAfter=15
+    )
+
+    h1_style = ParagraphStyle(
+        'Heading1_Custom',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=14,
+        leading=18,
+        textColor=c_primary,
+        spaceBefore=14,
+        spaceAfter=8,
+        keepWithNext=True
+    )
+
+    body_style = ParagraphStyle(
+        'Body_Custom',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9.5,
+        leading=13.5,
+        textColor=c_text,
+        spaceAfter=8
+    )
+
+    code_style = ParagraphStyle(
+        'Code_Custom',
+        parent=styles['Normal'],
+        fontName='Courier',
+        fontSize=8,
+        leading=10.5,
+        textColor=colors.HexColor("#0f172a")
+    )
+
+    bullet_style = ParagraphStyle(
+        'Bullet_Custom',
+        parent=body_style,
+        leftIndent=12,
+        spaceAfter=4
+    )
+
+    story = []
+
+    # Title Banner
+    story.append(Paragraph("Arquitectura del Catálogo Interactivo", title_style))
+    story.append(Paragraph("Proyecto: <b>Caps-Vnzla</b> | Stack: Python, Flask, SQLite & SQLAlchemy", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=c_secondary, spaceBefore=0, spaceAfter=12))
+
+    # Section 1: Dependencies
+    story.append(Paragraph("1. Dependencias y Librerías", h1_style))
+    story.append(Paragraph("A continuación se detallan las librerías necesarias en <code>requirements.txt</code> para garantizar una arquitectura modular, escalable y segura:", body_style))
+
+    reqs_data = [
+        [Paragraph("<b>Librería</b>", body_style), Paragraph("<b>Versión</b>", body_style), Paragraph("<b>Función / Propósito</b>", body_style)],
+        [Paragraph("<b>Flask</b>", body_style), Paragraph("3.0.2", body_style), Paragraph("Framework web principal ligero.", body_style)],
+        [Paragraph("<b>Flask-SQLAlchemy</b>", body_style), Paragraph("3.1.1", body_style), Paragraph("ORM para gestión relacional de datos en SQLite.", body_style)],
+        [Paragraph("<b>Flask-Migrate</b>", body_style), Paragraph("4.0.7", body_style), Paragraph("Control de versiones y migraciones de BDD.", body_style)],
+        [Paragraph("<b>Flask-WTF / WTForms</b>", body_style), Paragraph("1.2.1 / 3.1.2", body_style), Paragraph("Formularios seguros y validación de entradas.", body_style)],
+        [Paragraph("<b>Pillow</b>", body_style), Paragraph("10.2.0", body_style), Paragraph("Procesamiento y optimización de imágenes.", body_style)],
+        [Paragraph("<b>python-dotenv</b>", body_style), Paragraph("1.0.1", body_style), Paragraph("Manejo seguro de variables de entorno.", body_style)],
+    ]
+
+    t_reqs = Table(reqs_data, colWidths=[1.3*inch, 1.0*inch, 4.7*inch])
+    t_reqs.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), c_primary),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('GRID', (0, 0), (-1, -1), 0.5, c_border),
+    ]))
+    story.append(t_reqs)
+    story.append(Spacer(1, 10))
+
+    # Section 2: Folder Structure
+    story.append(Paragraph("2. Estructura del Proyecto (Application Factory)", h1_style))
+    story.append(Paragraph("Diseño modular optimizado para mantener separación clara de responsabilidades (Patrón MVC):", body_style))
+
+    structure_text = """Caps-Vnzla/
+├── app/
+│   ├── __init__.py          # Inicialización de la App y Flask-SQLAlchemy
+│   ├── models.py            # Modelos de BDD en SQLite (SQLAlchemy)
+│   ├── static/              # CSS, JavaScript e imágenes subidas
+│   │   ├── css/style.css
+│   │   ├── js/catalog.js   # Lógica interactiva cliente (AJAX/Filtros)
+│   │   └── uploads/        # Galería de imágenes de productos
+│   ├── templates/           # Plantillas Jinja2 (HTML)
+│   │   ├── base.html
+│   │   ├── catalog/         # Vistas del catálogo público
+│   │   └── admin/           # Panel de administración
+│   └── views/               # Controladores / Blueprints
+│       ├── catalog.py       # Rutas del catálogo y API
+│       └── admin.py         # Rutas de gestión
+├── config.py                # Configuración de SQLite y variables
+├── .env                     # Variables de entorno
+├── requirements.txt         # Lista de dependencias
+└── run.py                   # Punto de entrada de la aplicación"""
+
+    t_struct = Table([[Paragraph(structure_text.replace('\n', '<br/>').replace(' ', '&nbsp;'), code_style)]], colWidths=[7.0*inch])
+    t_struct.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), c_bg_code),
+        ('BOX', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(t_struct)
+    story.append(Spacer(1, 10))
+
+    # Section 3: Entity-Relationship
+    story.append(Paragraph("3. Modelo Entidad-Relación (Base de Datos SQLite)", h1_style))
+    story.append(Paragraph("Estructura relacional diseñada para soportar filtrado dinámico, categorías y múltiples imágenes por producto:", body_style))
+
+    er_text = """+---------------+       1 : N       +---------------+
+|  CATEGORIA    |<------------------|   PRODUCTO    |
++---------------+                   +---------------+
+| id (PK)       |                   | id (PK)       |
+| nombre        |                   | codigo        |
+| slug          |                   | descripcion   |
++---------------+                   | precio        |
+                                    | categoria_id  |
+                                    +---------------+
+                                      |          ^
+                                1 : N |          | N : M
+                                      v          v
+                            +---------------+  +---------------+
+                            | IMAGEN_PROD   |  |   ETIQUETA    |
+                            +---------------+  +---------------+
+                            | id (PK)       |  | id (PK)       |
+                            | url_imagen    |  | nombre        |
+                            | producto_id   |  | slug          |
+                            +---------------+  +---------------+"""
+
+    t_er = Table([[Paragraph(er_text.replace('\n', '<br/>').replace(' ', '&nbsp;'), code_style)]], colWidths=[7.0*inch])
+    t_er.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), c_bg_code),
+        ('BOX', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(t_er)
+    story.append(Spacer(1, 10))
+
+    # Section 4: Implementation Code
+    story.append(Paragraph("4. Código Fuente Principal", h1_style))
+    story.append(Paragraph("<b>A. Definición de Modelos (<code>app/models.py</code>)</b>", body_style))
+
+    models_code = """from app import db
+from datetime import datetime
+
+producto_etiqueta = db.Table('producto_etiqueta',
+    db.Column('producto_id', db.Integer, db.ForeignKey('productos.id'), primary_key=True),
+    db.Column('etiqueta_id', db.Integer, db.ForeignKey('etiquetas.id'), primary_key=True)
+)
+
+class Categoria(db.Model):
+    __tablename__ = 'categorias'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
+    productos = db.relationship('Producto', backref='categoria', lazy=True)
+
+class Producto(db.Model):
+    __tablename__ = 'productos'
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(50), unique=True, nullable=False)
+    nombre = db.Column(db.String(150), nullable=False)
+    descripcion = db.Column(db.Text, nullable=False)
+    precio = db.Column(db.Float, nullable=False)
+    activo = db.Column(db.Boolean, default=True)
+    categoria_id = db.Column(db.Integer, db.ForeignKey('categorias.id'), nullable=False)
+    imagenes = db.relationship('ImagenProducto', backref='producto', cascade="all, delete-orphan", lazy=True)
+    etiquetas = db.relationship('Etiqueta', secondary=producto_etiqueta, lazy='subquery')
+
+class ImagenProducto(db.Model):
+    __tablename__ = 'imagenes_producto'
+    id = db.Column(db.Integer, primary_key=True)
+    url_imagen = db.Column(db.String(255), nullable=False)
+    es_principal = db.Column(db.Boolean, default=False)
+    producto_id = db.Column(db.Integer, db.ForeignKey('productos.id'), nullable=False)"""
+
+    t_models = Table([[Paragraph(models_code.replace('\n', '<br/>').replace(' ', '&nbsp;'), code_style)]], colWidths=[7.0*inch])
+    t_models.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), c_bg_code),
+        ('BOX', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(t_models)
+    story.append(Spacer(1, 10))
+
+    story.append(Paragraph("<b>B. Controlador e Interacción AJAX (<code>app/views/catalog.py</code>)</b>", body_style))
+
+    views_code = """from flask import Blueprint, render_template, request, jsonify
+from app.models import Producto, Categoria
+
+catalog_bp = Blueprint('catalog', __name__)
+
+@catalog_bp.route('/')
+def index():
+    categorias = Categoria.query.all()
+    return render_template('catalog/index.html', categorias=categorias)
+
+@catalog_bp.route('/api/productos')
+def get_productos():
+    categoria_id = request.args.get('categoria_id', type=int)
+    busqueda = request.args.get('q', type=str)
+
+    query = Producto.query.filter_by(activo=True)
+    if categoria_id:
+        query = query.filter_by(categoria_id=categoria_id)
+    if busqueda:
+        query = query.filter(Producto.nombre.ilike(f'%{busqueda}%'))
+
+    productos = query.all()
+    resultado = [{
+        'id': p.id,
+        'nombre': p.nombre,
+        'precio': p.precio,
+        'categoria': p.categoria.nombre,
+        'imagen': next((i.url_imagen for i in p.imagenes if i.es_principal), '/static/img/placeholder.png')
+    } for p in productos]
+
+    return jsonify(resultado)"""
+
+    t_views = Table([[Paragraph(views_code.replace('\n', '<br/>').replace(' ', '&nbsp;'), code_style)]], colWidths=[7.0*inch])
+    t_views.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), c_bg_code),
+        ('BOX', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(t_views)
+    story.append(Spacer(1, 10))
+
+    # Section 5: Execution Steps
+    story.append(Paragraph("5. Pasos para Inicializar el Proyecto", h1_style))
+    story.append(Paragraph("<b>1. Crear entorno virtual:</b> <code>python -m venv venv</code>", bullet_style))
+    story.append(Paragraph("<b>2. Activar entorno:</b> <code>source venv/bin/activate</code> (Linux/Mac) o <code>venv\\Scripts\\activate</code> (Windows)", bullet_style))
+    story.append(Paragraph("<b>3. Instalar librerías:</b> <code>pip install -r requirements.txt</code>", bullet_style))
+    story.append(Paragraph("<b>4. Ejecutar servidor local:</b> <code>python run.py</code>", bullet_style))
+
+    # Build Document
+    doc.build(story, canvasmaker=NumberedCanvas)
+
+if __name__ == "__main__":
+    create_catalog_doc()
