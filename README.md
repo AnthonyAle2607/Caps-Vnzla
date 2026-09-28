@@ -81,6 +81,46 @@ flask --app run.py db upgrade
 
 La aplicación quedará disponible en http://localhost:5000.
 
+## Despliegue en Vercel con Supabase
+
+El punto de entrada de Flask para Vercel es `index.py`. Para desplegar:
+
+1. Sube el proyecto a GitHub e impórtalo en Vercel; deja como raíz del proyecto
+   la carpeta que contiene `index.py` y `requirements.txt`.
+2. En la configuración del proyecto en Vercel, agrega estas variables para los
+   entornos que vayas a utilizar:
+   - `DATABASE_URL`: cadena PostgreSQL de Supabase. La configuración selecciona
+     automáticamente el driver `psycopg` incluido en las dependencias.
+   - `SECRET_KEY`: secreto aleatorio y exclusivo de producción.
+   - `ADMIN_DEFAULT_USERNAME` y `ADMIN_DEFAULT_PASSWORD`: credenciales iniciales
+     seguras para crear el administrador.
+   - `CURRENCY_RATE_BS`, `SHIPPING_COST_USD` y `WHATSAPP_PHONE`.
+3. Antes de abrir la tienda, ejecuta las migraciones contra la base de Supabase
+   desde un entorno local que tenga esas mismas variables configuradas:
+
+   ```bash
+   flask --app index:app db upgrade
+   ```
+
+4. Para crear los datos iniciales en una base recién migrada, ejecuta una sola
+   vez:
+
+   ```bash
+   python -c "from index import app; from app import seed_data; ctx=app.app_context(); ctx.push(); seed_data(); ctx.pop()"
+   ```
+
+   Define las credenciales administrativas antes de hacerlo. `seed_data()`
+   añade el catálogo de demostración si la base está vacía; no reemplaza datos
+   existentes.
+5. Despliega primero como Preview y prueba el catálogo, login, compras y conexión
+   a la base. No publiques el archivo `.env` ni copies sus valores a Git.
+
+Las imágenes que ya forman parte del repositorio se despliegan junto con el
+código. Las imágenes nuevas que se carguen desde el administrador se guardan hoy
+en el disco local; ese almacenamiento no es persistente en Vercel. Para usar
+cargas de imágenes en producción, configura Supabase Storage u otro servicio de
+archivos y adapta el flujo de subida del administrador antes de depender de él.
+
 ## Documentación técnica
 
 Todo el código base tiene comentarios y/o docstrings explicando:
