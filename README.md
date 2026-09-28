@@ -26,12 +26,14 @@ La tienda está diseñada como una experiencia de compra moderna para una marca 
 
 El proyecto sigue el patrón MVC / application factory de Flask:
 
-- `app/__init__.py`: creación de la app, configuración centralizada y carga inicial de datos.
+- `app/__init__.py`: creación de la app, configuración centralizada y semilla de datos para SQLite.
 - `app/config.py`: variables globales y configuración del entorno.
-- `app/models.py`: modelos SQLAlchemy para categorías, productos, imágenes y etiquetas.
-- `app/views/catalog.py`: rutas públicas del catálogo y endpoints JSON.
-- `app/templates/`: plantillas HTML Jinja2 para la vista base y detalle del producto.
-- `app/static/`: estilos CSS, scripts JavaScript y recursos visuales del storefront.
+- `app/models.py`: modelos SQLAlchemy para catálogo, colecciones, administradores, pedidos e inventario.
+- `app/views/catalog.py`: páginas públicas, checkout, colecciones y endpoints JSON.
+- `app/views/admin.py`: autenticación, catálogo, pedidos, colecciones e informes comerciales.
+- `app/templates/`: plantillas Jinja2 del storefront y del panel administrativo.
+- `app/static/`: estilos CSS, scripts JavaScript e imágenes.
+- `migrations/`: historial versionado del esquema de la base de datos.
 
 ## Requisitos
 
@@ -71,6 +73,12 @@ El proyecto sigue el patrón MVC / application factory de Flask:
    python run.py
    ```
 
+Para aplicar cambios pendientes del esquema:
+
+```bash
+flask --app run.py db upgrade
+```
+
 La aplicación quedará disponible en http://localhost:5000.
 
 ## Documentación técnica
@@ -109,10 +117,14 @@ La documentación adicional del proyecto se encuentra en la carpeta `docs/`.
 
 - Header con navegación y selector de moneda.
 - Hero principal con branding visual.
+- Marca de agua PNG transparente del monograma «RR» en antracita, integrada con desvanecimiento en el fondo negro del hero y sin recuadro.
 - Catálogo interactivo con búsqueda y filtros.
 - Tarjetas de productos con descripción bajo la imagen.
 - Carrito lateral con opciones de cantidad.
 - Conversión automática entre USD y BS.
+- Colecciones con página propia y productos asignados.
+- Checkout con dirección de entrega y enlace de confirmación por WhatsApp.
+- Panel administrativo y dashboard comercial disponible en `/admin/ventas`.
 - Plantilla reutilizable con base HTML y estilos globales.
 
 ## Estructura del proyecto
@@ -135,7 +147,8 @@ Caps-Vnzla/
 │       └── catalog.py
 ├── docs/
 │   ├── arquitectura.md
-│   └── planificacion.md
+│   ├── planificacion-comercio.md
+│   └── planificacion-base-datos.md
 ├── .env.example
 ├── .gitignore
 ├── README.md
@@ -150,24 +163,42 @@ Para ajustar la tasa de cambio, editar el archivo `.env` o la variable `CURRENCY
 
 ## Base de datos local y administración
 
-La aplicación usa SQLite como base local y SQLAlchemy como ORM. Al iniciar, crea
-las tablas que no existan y carga colecciones de demostración únicamente si no
-hay registros previos.
+La aplicación usa SQLAlchemy y Flask-Migrate. SQLite permite trabajar en local;
+el motor se configura con `DATABASE_URL` (también compatible con PostgreSQL).
+En SQLite, la app crea tablas ausentes y carga datos de demostración si hace
+falta catálogo. Para otros motores, aplica las migraciones con Flask-Migrate.
 
 - Catálogo público: `http://localhost:5000/`
-- Panel administrativo preliminar: `http://localhost:5000/admin/`
+- Panel administrativo: `http://localhost:5000/admin/`
+- Análisis de ventas: `http://localhost:5000/admin/ventas`
 - Checkout: `http://localhost:5000/checkout`
 - Plan técnico: [`docs/planificacion-base-datos.md`](docs/planificacion-base-datos.md)
 
-El panel administrativo actual es una vista de supervisión en modo lectura.
-Antes de habilitar operaciones de escritura debe incorporar autenticación,
-roles, protección CSRF, validación de formularios y auditoría.
+El panel administrativo requiere inicio de sesión y permite administrar el
+catálogo desde `http://localhost:5000/admin/`:
+
+- Crear, editar, publicar y retirar productos sin perder el historial de pedidos.
+- Ajustar precio, descripción, categoría, inventario y colores disponibles.
+- Cargar una galería de hasta ocho imágenes JPEG, PNG o WebP por producto.
+- Crear, ordenar, editar, publicar y retirar colecciones.
+- Asignar productos a una o varias colecciones; cada colección tiene su propia
+  página con productos, precios y existencias.
+- Consultar pedidos y movimientos de inventario.
+- Registrar opcionalmente el costo de compra unitario, además del precio de venta.
+- Revisar un dashboard con ingresos, utilidad bruta estimada, productos más
+  rentables y una sugerencia orientativa de reposición a 30 días.
+
+Las imágenes cargadas desde administración se guardan en
+`app/static/img/productos/`. Se validan con Pillow y admiten un máximo de 5 MB y
+40 megapíxeles por archivo.
+
+La rentabilidad solo incluye costos capturados al registrar cada pedido. Los
+pedidos son solicitudes enviadas a WhatsApp pendientes de confirmación, por lo
+que el dashboard no representa pagos liquidados. La sugerencia de reposición
+proyecta el ritmo de pedidos reciente y no sustituye una decisión de compra.
 
 ## Posibles extensiones
 
-- panel administrativo,
-- gestión de stock,
-- proceso de pago,
-- autenticación,
 - manejo de promociones y descuentos,
-- escalado con base de datos real y migraciones.
+- integración de pagos y confirmación automática de pedidos,
+- controles adicionales de acceso y recuperación de contraseña.

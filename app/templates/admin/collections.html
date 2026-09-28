@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Colecciones | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page container">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">Personalización de la tienda</p>
+        <h1>Colecciones</h1>
+        <p class="lead">Organiza los productos y decide qué colecciones se muestran en la página principal.</p>
+      </div>
+      <div class="admin-heading__actions">
+        <a class="cta-button" href="{{ url_for('admin.edit_collection') }}">Nueva colección</a>
+        <a class="secondary-button" href="{{ url_for('admin.dashboard') }}">Volver al panel</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="form-message form-message--{{ category }}" role="status">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="admin-collection-grid">
+      {% for collection in collections %}
+        <article class="admin-panel admin-collection-card">
+          <img src="{{ collection.imagen_url }}" alt="Portada de {{ collection.nombre }}" />
+          <div class="admin-collection-card__body">
+            <p class="eyebrow">{{ 'Visible en la tienda' if collection.activa else 'Retirada de la tienda' }}</p>
+            <h2>{{ collection.nombre }}</h2>
+            <p>{{ collection.descripcion }}</p>
+            <p>{{ collection.productos|selectattr('activo')|list|length }} productos publicados</p>
+            <div class="admin-heading__actions">
+              <a class="secondary-button" href="{{ url_for('admin.edit_collection', coleccion_id=collection.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('admin.toggle_collection_status', coleccion_id=collection.id) }}">
+                <button class="{{ 'secondary-button' if collection.activa else 'cta-button' }}" type="submit">
+                  {{ 'Retirar' if collection.activa else 'Publicar' }}
+                </button>
+              </form>
+            </div>
+          </div>
+        </article>
+      {% else %}
+        <p class="empty-state">Todavía no hay colecciones. Crea una para organizar el catálogo.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

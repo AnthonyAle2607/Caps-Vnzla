@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar colección' if collection else 'Nueva colección' }} | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page container">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">Personalización de la tienda</p>
+        <h1>{{ 'Editar colección' if collection else 'Crear colección' }}</h1>
+        <p class="lead">Elige su portada, descripción, posición y los productos que la componen.</p>
+      </div>
+      <a class="secondary-button" href="{{ url_for('admin.manage_collections') }}">Volver a colecciones</a>
+    </div>
+
+    <section class="admin-panel admin-form-card">
+      {% if error %}
+        <p class="form-message form-message--error" role="alert">{{ error }}</p>
+      {% endif %}
+      <form method="post" enctype="multipart/form-data" class="admin-form">
+        <label>
+          Nombre de la colección
+          <input name="nombre" maxlength="120" value="{{ form_data.get('nombre', collection.nombre if collection else '') if form_data else (collection.nombre if collection else '') }}" required />
+        </label>
+        <label>
+          Descripción visible en la tienda
+          <textarea name="descripcion" required>{{ form_data.get('descripcion', collection.descripcion if collection else '') if form_data else (collection.descripcion if collection else '') }}</textarea>
+        </label>
+        <label>
+          Orden de aparición
+          <input type="number" name="orden" min="0" step="1" value="{{ form_data.get('orden', collection.orden if collection else 0) if form_data else (collection.orden if collection else 0) }}" required />
+        </label>
+        <label>
+          Productos de la colección
+          <select name="productos" multiple size="8">
+            {% for product in products %}
+              {% set productos_seleccionados = form_data.getlist('productos') if form_data else (collection.productos|map(attribute='id')|map('string')|list if collection else []) %}
+              <option value="{{ product.id }}" {% if product.id|string in productos_seleccionados %}selected{% endif %}>{{ product.nombre }}{% if not product.activo %} (retirado){% endif %}</option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">Usa Ctrl (Windows) o ⌘ (Mac) para elegir varios productos.</span>
+        </label>
+        <label>
+          Portada de la colección
+          <input type="file" name="imagen" accept="image/jpeg,image/png,image/webp" {% if not collection %}required{% endif %} />
+          <span class="field-hint">JPEG, PNG o WebP, máximo 5 MB.{% if collection %} Si no eliges otra imagen se conserva la actual.{% endif %}</span>
+        </label>
+        {% if collection %}
+          <img class="admin-collection-preview" src="{{ collection.imagen_url }}" alt="Portada actual de {{ collection.nombre }}" />
+        {% endif %}
+        <label class="checkbox-label">
+          <input type="checkbox" name="activa" {% if form_data %}{% if form_data.get('activa') == 'on' %}checked{% endif %}{% elif not collection or collection.activa %}checked{% endif %} />
+          Mostrar colección en la tienda
+        </label>
+        <div class="detail-actions">
+          <button class="cta-button" type="submit">Guardar colección</button>
+          <a class="secondary-button" href="{{ url_for('admin.manage_collections') }}">Cancelar</a>
+        </div>
+      </form>
+    </section>
+  </section>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Análisis de ventas | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page admin-sales-page">
+    <div class="admin-heading admin-sales-heading">
+      <div>
+        <p class="eyebrow">Inteligencia de negocio</p>
+        <h1>Análisis de ventas</h1>
+        <p class="lead">Revisa qué se vende, el margen estimado y qué conviene reponer.</p>
+      </div>
+      <form class="sales-period-form" method="get">
+        <label for="sales-period">Período analizado</label>
+        <select id="sales-period" name="periodo" onchange="this.form.submit()">
+          <option value="7" {% if selected_period == '7' %}selected{% endif %}>Últimos 7 días</option>
+          <option value="30" {% if selected_period == '30' %}selected{% endif %}>Últimos 30 días</option>
+          <option value="90" {% if selected_period == '90' %}selected{% endif %}>Últimos 90 días</option>
+        </select>
+      </form>
+    </div>
+
+    <div class="sales-disclaimer">
+      <span aria-hidden="true">ⓘ</span>
+      <p>
+        Estos datos representan pedidos registrados en la tienda; todavía deben confirmarse por WhatsApp.
+        Los ingresos excluyen el envío. El margen se calcula solo donde se registró el costo de compra
+        y es una estimación antes de otros gastos.
+      </p>
+    </div>
+
+    <div class="sales-metrics">
+      <article class="sales-metric-card">
+        <span class="sales-metric-card__icon sales-metric-card__icon--yellow">↗</span>
+        <span class="sales-metric-card__label">Ingresos por productos</span>
+        <strong>${{ '%.2f'|format(revenue_usd) }}</strong>
+        <small>Valor de productos en {{ order_count }} pedidos</small>
+      </article>
+      <article class="sales-metric-card">
+        <span class="sales-metric-card__icon sales-metric-card__icon--blue">▥</span>
+        <span class="sales-metric-card__label">Unidades solicitadas</span>
+        <strong>{{ units_sold }}</strong>
+        <small>Unidades registradas en {{ period_days }} días</small>
+      </article>
+      <article class="sales-metric-card">
+        <span class="sales-metric-card__icon sales-metric-card__icon--green">✳</span>
+        <span class="sales-metric-card__label">Utilidad bruta estimada</span>
+        <strong>${{ '%.2f'|format(gross_profit_usd) }}</strong>
+        <small>{{ '%.1f'|format(margin_percent) }}% sobre ingresos con costo conocido · {{ '%.0f'|format(cost_coverage_percent) }}% de unidades con costo</small>
+      </article>
+      <article class="sales-metric-card">
+        <span class="sales-metric-card__icon sales-metric-card__icon--violet">◷</span>
+        <span class="sales-metric-card__label">Promedio por pedido</span>
+        <strong>${{ '%.2f'|format(revenue_usd / order_count if order_count else 0) }}</strong>
+        <small>Solo importe de productos, sin envío</small>
+      </article>
+    </div>
+
+    <section class="sales-panel sales-trend-panel">
+      <div class="sales-panel__heading">
+        <div>
+          <p class="eyebrow">Tendencia</p>
+          <h2>Ingresos por día</h2>
+        </div>
+        <span class="admin-badge">USD · últimos {{ period_days }} días</span>
+      </div>
+      {% if revenue_usd %}
+        <div class="sales-chart" role="img" aria-label="Gráfico diario de ingresos por productos durante los últimos {{ period_days }} días">
+          {% for day in sales_by_day %}
+            <div class="sales-chart__column" title="{{ day.date.strftime('%d/%m/%Y') }}: ${{ '%.2f'|format(day.revenue_usd) }} · {{ day.units }} unidades">
+              <span class="sales-chart__value">{% if day.revenue_usd %}${{ '%.0f'|format(day.revenue_usd) }}{% endif %}</span>
+              <div class="sales-chart__bar {{ 'sales-chart__bar--active' if day.revenue_usd else '' }}" style="--bar-height: {{ day.bar_percent }}%;"></div>
+              <span class="sales-chart__label">{{ day.date.strftime('%d/%m') }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="sales-empty-state">
+          <span aria-hidden="true">▥</span>
+          <h3>Aún no hay ventas registradas en este período</h3>
+          <p>Cuando los clientes envíen pedidos, aquí verás los ingresos y la evolución diaria.</p>
+          <a href="{{ url_for('admin.orders') }}">Revisar pedidos</a>
+        </div>
+      {% endif %}
+    </section>
+
+    <div class="sales-analysis-grid">
+      <section class="sales-panel">
+        <div class="sales-panel__heading">
+          <div>
+            <p class="eyebrow">Margen histórico conocido</p>
+            <h2>Productos más rentables</h2>
+          </div>
+        </div>
+        <p class="sales-panel__hint">Comparación basada en el precio y el costo registrados al solicitar cada producto.</p>
+        {% if profitable_products %}
+          <div class="sales-table-wrap">
+            <table class="sales-table">
+              <thead><tr><th>Producto</th><th>Unidades</th><th>Ingresos</th><th>Utilidad bruta</th><th>Margen</th></tr></thead>
+              <tbody>
+                {% for row in profitable_products %}
+                  <tr>
+                    <td><strong>{{ row.name }}</strong><small>Stock actual: {{ row.product.stock }}</small></td>
+                    <td>{{ row.units }}</td>
+                    <td>${{ '%.2f'|format(row.revenue_usd) }}</td>
+                    <td class="sales-table__profit">${{ '%.2f'|format(row.profit_usd) }}</td>
+                    <td>{{ '%.1f'|format(row.profit_usd / row.known_cost_revenue_usd * 100 if row.known_cost_revenue_usd else 0) }}%</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="sales-empty-state sales-empty-state--compact">
+            <h3>Faltan costos o ventas para calcular la rentabilidad</h3>
+            <p>
+              {% if unknown_cost_units %}
+                {{ unknown_cost_units }} unidades ya tienen pedidos, pero sus costos todavía no están registrados.
+                Completa el campo «Costo de compra» al editar esos productos.
+              {% else %}
+                Al registrar pedidos y el costo de compra por producto, podrás comparar el margen bruto.
+              {% endif %}
+            </p>
+            <a href="{{ url_for('admin.dashboard') }}#productos">Completar costos de compra</a>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="sales-panel sales-restock-panel">
+        <div class="sales-panel__heading">
+          <div>
+            <p class="eyebrow">Planifica la compra</p>
+            <h2>Reposición sugerida</h2>
+          </div>
+          <span class="sales-restock-horizon">Próximos 30 días</span>
+        </div>
+        <p class="sales-panel__hint">Proyección simple del ritmo de pedidos menos el stock disponible; no es una orden de compra automática.</p>
+        {% if restock_products %}
+          <ul class="restock-list">
+            {% for row in restock_products %}
+              <li class="restock-item">
+                <span class="restock-item__image"><img src="{{ row.product.primary_image() }}" alt="" /></span>
+                <span class="restock-item__details">
+                  <strong>{{ row.name }}</strong>
+                  <small>{{ row.units }} solicitadas · {{ row.product.stock }} en stock</small>
+                  <small>{% if row.product.costo_usd %}Costo actual: ${{ '%.2f'|format(row.product.costo_usd) }} c/u{% else %}Costo de compra pendiente{% endif %}</small>
+                </span>
+                <span class="restock-item__quantity">+{{ row.restock_suggestion }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="sales-empty-state sales-empty-state--compact">
+            <h3>No hace falta reponer según este período</h3>
+            <p>Los productos activos tienen stock suficiente para el ritmo de pedidos observado.</p>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+
+    {% if unsold_products_count %}
+      <p class="sales-footnote">{{ unsold_products_count }} productos activos no registran pedidos en los últimos {{ period_days }} días. La proyección usa el período elegido y un horizonte de 30 días.</p>
+    {% endif %}
+  </section>
+{% endblock %}

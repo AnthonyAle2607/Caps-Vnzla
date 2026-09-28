@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ collection.nombre }} | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="collection-hero container">
+    <a class="collection-back-link" href="{{ url_for('catalog.index') }}#shop">← Todas las colecciones</a>
+    <div class="collection-hero__content">
+      <div>
+        <p class="eyebrow">Colección CAPS VNZLA</p>
+        <h1>{{ collection.nombre }}</h1>
+        <p>{{ collection.descripcion }}</p>
+        <span class="collection-hero__count">{{ products|length }} diseños disponibles</span>
+      </div>
+      <img src="{{ collection.imagen_url }}" alt="Colección {{ collection.nombre }}" />
+    </div>
+  </section>
+
+  <section class="collection-products container" aria-labelledby="collection-products-heading">
+    <div class="catalog-header">
+      <div>
+        <p class="eyebrow">Piezas seleccionadas</p>
+        <h2 id="collection-products-heading">Explora esta colección</h2>
+      </div>
+    </div>
+
+    {% if products %}
+      <div class="collection-product-grid">
+        {% for product in products %}
+          <article class="product-card">
+            <a class="product-card__media collection-product-card__image" href="{{ url_for('catalog.product_detail', producto_id=product.id) }}">
+              <img src="{{ product.primary_image() }}" alt="{{ product.nombre }}" />
+              {% if product.stock <= 5 and product.stock > 0 %}
+                <span class="badge badge--primary">Últimas {{ product.stock }} unidades</span>
+              {% elif product.stock == 0 %}
+                <span class="badge badge--sold-out">Agotado</span>
+              {% endif %}
+            </a>
+            <div class="product-card__body">
+              <p class="product-card__category">{{ product.categoria.nombre }}</p>
+              <h3><a href="{{ url_for('catalog.product_detail', producto_id=product.id) }}">{{ product.nombre }}</a></h3>
+              <p class="product-card__description">{{ product.descripcion }}</p>
+              <div class="collection-product-card__prices">
+                <strong>USD ${{ '%.2f'|format(product.precio_usd) }}</strong>
+                <span>Bs. {{ '%.2f'|format(product.precio_usd * currency_rate) }}</span>
+              </div>
+              <div class="product-card__actions">
+                <a class="secondary-button" href="{{ url_for('catalog.product_detail', producto_id=product.id) }}">Ver detalle</a>
+                <button type="button" class="cta-button" data-add-to-cart="{{ product.id }}" {% if product.stock == 0 %}disabled{% endif %}>Añadir</button>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h3>Esta colección pronto tendrá nuevos diseños.</h3>
+        <p>Mientras tanto, descubre el resto del catálogo CAPS VNZLA.</p>
+        <a class="cta-button" href="{{ url_for('catalog.index') }}#catalog">Explorar catálogo</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <script>
+    window.catalogData = {{ products_json | tojson }};
+    window.currencyRate = {{ currency_rate }};
+  </script>
+{% endblock %}

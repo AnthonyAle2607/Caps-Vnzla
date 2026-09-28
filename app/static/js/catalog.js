@@ -52,20 +52,32 @@ function formatMoney(value, currency = state.currency) {
   const numericValue = Number(value || 0);
 
   if (currency === "BS") {
-    return `Bs ${numericValue * state.rate}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const amountInBolivares = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numericValue * state.rate);
+    return `Bs ${amountInBolivares}`;
   }
 
   return `$ ${numericValue.toFixed(2)}`;
 }
 
 /**
- * Convierte un precio en dólares a la moneda seleccionada.
+ * Codifica texto de la base de datos antes de insertarlo en plantillas HTML.
  *
- * @param {number} priceUsd - Precio del producto en dólares.
- * @returns {number} Precio convertido.
+ * @param {string|number} value - Contenido que se mostrará en el catálogo.
+ * @returns {string} Texto seguro para insertar como contenido HTML.
  */
-function convertPrice(priceUsd) {
-  return state.currency === "BS" ? Number(priceUsd) * state.rate : Number(priceUsd);
+function escapeHTML(value) {
+  const entities = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  };
+
+  return String(value ?? "").replace(/[&<>"']/g, (character) => entities[character]);
 }
 
 /**
@@ -125,27 +137,47 @@ function renderProducts(products) {
 
   container.innerHTML = products
     .map(
-      (product) => `
+      (product) => {
+        const productId = Number(product.id);
+        const safeProductId = Number.isInteger(productId) && productId > 0 ? productId : 0;
+        const collections = Array.isArray(product.colecciones)
+          ? product.colecciones.map(escapeHTML).join(", ")
+          : "";
+        const labels = Array.isArray(product.etiquetas) ? product.etiquetas : [];
+        const newLabel = labels.find((label) => String(label).toLowerCase() === "nuevo");
+        const collectionLabel = Array.isArray(product.colecciones) ? product.colecciones[0] : "";
+        const badge = newLabel
+          ? `<span class="badge badge--primary">${escapeHTML(newLabel)}</span>`
+          : collectionLabel
+            ? `<span class="badge badge--collection">${escapeHTML(collectionLabel)}</span>`
+            : Number(product.stock) > 0 && Number(product.stock) <= 5
+              ? `<span class="badge badge--stock">Últimas ${escapeHTML(product.stock)}</span>`
+              : "";
+        const isAvailable = Number(product.stock) > 0;
+        return `
         <article class="product-card">
-          <div class="product-card__media">
-            <img src="${product.imagen || "/static/img/placeholder.svg"}" alt="${product.nombre}" />
-            <span class="badge badge--primary">NUEVO</span>
-          </div>
+          <a class="product-card__media" href="/producto/${safeProductId}" aria-label="Ver detalle de ${escapeHTML(product.nombre)}">
+            <img src="${escapeHTML(product.imagen || "/static/img/placeholder.svg")}" alt="${escapeHTML(product.nombre)}" />
+            ${badge}
+            <span class="product-card__view-hint">Ver producto <span aria-hidden="true">↗</span></span>
+          </a>
           <div class="product-card__body">
-            <p class="product-card__category">${product.categoria}</p>
-            <h3>${product.nombre}</h3>
-            <p class="product-card__description">${product.descripcion.slice(0, 80)}...</p>
+            <p class="product-card__category">${escapeHTML(product.categoria)}</p>
+            ${collections ? `<p class="product-card__collections">${collections}</p>` : ""}
+            <h3>${escapeHTML(product.nombre)}</h3>
+            <p class="product-card__description">${escapeHTML(product.descripcion.slice(0, 100))}${product.descripcion.length > 100 ? "…" : ""}</p>
             <div class="product-card__meta">
-              <span class="product-card__price">${formatMoney(convertPrice(product.precio_usd))}</span>
-              <span class="product-card__stock">${product.stock} disponibles</span>
+              <span class="product-card__price">${formatMoney(product.precio_usd)}</span>
+              <span class="product-card__stock ${isAvailable ? "" : "product-card__stock--empty"}">${isAvailable ? `${escapeHTML(product.stock)} disponibles` : "Agotado"}</span>
             </div>
             <div class="product-card__actions">
-              <a href="/producto/${product.id}" class="secondary-button">Ver detalle</a>
-              <button type="button" class="cta-button" data-add-to-cart="${product.id}">Añadir</button>
+              <a href="/producto/${safeProductId}" class="secondary-button">Ver detalle</a>
+              <button type="button" class="cta-button" data-add-to-cart="${safeProductId}" ${isAvailable ? "" : "disabled"}>${isAvailable ? "Añadir al carrito" : "Agotado"}</button>
             </div>
           </div>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
   bindAddToCartButtons(container);
@@ -255,6 +287,15 @@ function bindAddToCartButtons(root) {
     button.dataset.cartBound = "true";
     button.addEventListener("click", () => {
       addToCart(button.dataset.addToCart);
+      if (!button.disabled) {
+        const originalLabel = button.textContent;
+        button.textContent = "Añadido ✓";
+        button.classList.add("is-added");
+        window.setTimeout(() => {
+          button.textContent = originalLabel;
+          button.classList.remove("is-added");
+        }, 1300);
+      }
     });
   });
 }
@@ -334,6 +375,12 @@ function updateCartDisplay() {
   }
 
   cartCount.textContent = String(state.cart.reduce((sum, item) => sum + item.quantity, 0));
+  const itemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+  document.querySelectorAll("[data-mobile-cart-count]").forEach((element) => {
+    element.textContent = element.classList.contains("mobile-cart-bar__count")
+      ? String(itemCount)
+      : `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"}`;
+  });
 
   if (!state.cart.length) {
     cartItems.innerHTML = '<p class="empty-cart">Tu carrito está vacío.</p>';
@@ -352,9 +399,9 @@ function updateCartDisplay() {
       (item) => `
         <div class="cart-item">
           <div class="cart-item__info">
-            <strong>${item.name}</strong>
-            ${item.color ? `<small>Color: ${item.color}</small>` : ""}
-            <span>${formatMoney(convertPrice(item.price_usd))}</span>
+            <strong>${escapeHTML(item.name)}</strong>
+            ${item.color ? `<small>Color: ${escapeHTML(item.color)}</small>` : ""}
+            <span>${formatMoney(item.price_usd)}</span>
           </div>
           <div class="cart-item__controls">
             <button type="button" data-cart-action="decrease" data-product-id="${item.id}">-</button>
@@ -366,9 +413,8 @@ function updateCartDisplay() {
     )
     .join("");
 
-  const displaySubtotal = convertPrice(subtotal);
-  subtotalDisplay.textContent = formatMoney(displaySubtotal);
-  totalDisplay.textContent = formatMoney(displaySubtotal);
+  subtotalDisplay.textContent = formatMoney(subtotal);
+  totalDisplay.textContent = formatMoney(subtotal);
 }
 
 /**
@@ -378,10 +424,13 @@ function bindEvents() {
   const searchInput = document.getElementById("catalog-search");
   const filterButtons = document.querySelectorAll(".filter-btn");
   const currencyButtons = document.querySelectorAll(".currency-btn");
-  const cartToggle = document.getElementById("cart-toggle");
+  const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
+  const navigation = document.getElementById("store-navigation");
   const cartOverlay = document.getElementById("cart-overlay");
   const closeCartButton = document.getElementById("close-cart");
+  const cartPanel = document.getElementById("cart-panel");
   const checkoutButton = document.getElementById("checkout-button");
+  let cartTriggerElement = null;
   bindAddToCartButtons(document);
 
   if (searchInput) {
@@ -422,23 +471,98 @@ function bindEvents() {
     }
   });
 
-  if (cartToggle) {
-    cartToggle.addEventListener("click", () => {
-      document.body.classList.add("cart-open");
-    });
-  }
+  /**
+   * Cierra el menú móvil y sincroniza los atributos accesibles del botón.
+   */
+  const closeMobileMenu = () => {
+    document.body.classList.remove("menu-open");
+    mobileMenuToggle?.setAttribute("aria-expanded", "false");
+    mobileMenuToggle?.setAttribute("aria-label", "Abrir menú de navegación");
+  };
+
+  mobileMenuToggle?.addEventListener("click", () => {
+    const isOpen = document.body.classList.toggle("menu-open");
+    mobileMenuToggle.setAttribute("aria-expanded", String(isOpen));
+    mobileMenuToggle.setAttribute(
+      "aria-label",
+      isOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación",
+    );
+  });
+
+  navigation?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", closeMobileMenu);
+  });
+
+  /**
+   * Abre el cajón del carrito, lleva el foco a su cierre y recuerda el origen.
+   *
+   * @param {Element} trigger - Botón que solicitó abrir el carrito.
+   */
+  const openCart = (trigger) => {
+    closeMobileMenu();
+    cartTriggerElement = trigger;
+    document.body.classList.add("cart-open");
+    cartPanel?.setAttribute("aria-hidden", "false");
+    if (cartPanel) {
+      cartPanel.inert = false;
+    }
+    closeCartButton?.focus();
+  };
+
+  document.querySelectorAll("[data-cart-open]").forEach((trigger) => {
+    trigger.addEventListener("click", () => openCart(trigger));
+  });
+
+  /**
+   * Cierra el carrito y devuelve el foco al botón que lo abrió.
+   */
+  const closeCart = () => {
+    document.body.classList.remove("cart-open");
+    cartPanel?.setAttribute("aria-hidden", "true");
+    if (cartPanel) {
+      cartPanel.inert = true;
+    }
+    cartTriggerElement?.focus();
+    cartTriggerElement = null;
+  };
 
   if (cartOverlay) {
-    cartOverlay.addEventListener("click", () => {
-      document.body.classList.remove("cart-open");
-    });
+    cartOverlay.addEventListener("click", closeCart);
   }
 
   if (closeCartButton) {
-    closeCartButton.addEventListener("click", () => {
-      document.body.classList.remove("cart-open");
-    });
+    closeCartButton.addEventListener("click", closeCart);
   }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      if (document.body.classList.contains("cart-open")) {
+        closeCart();
+      } else {
+        closeMobileMenu();
+      }
+    }
+
+    if (event.key === "Tab" && document.body.classList.contains("cart-open") && cartPanel) {
+      const focusable = Array.from(
+        cartPanel.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), [tabindex="0"]'),
+      );
+      if (!focusable.length) {
+        event.preventDefault();
+        cartPanel.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
 
   if (checkoutButton) {
     checkoutButton.addEventListener("click", () => {

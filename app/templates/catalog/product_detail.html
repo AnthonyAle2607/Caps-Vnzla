@@ -5,7 +5,32 @@
 {% block content %}
   <section class="product-detail container">
     <div class="product-detail__media">
-      <img src="{{ product.primary_image() }}" alt="{{ product.nombre }}" />
+      <button
+        type="button"
+        class="product-detail__zoom-trigger"
+        aria-label="Ampliar imagen de {{ product.nombre }}"
+        aria-haspopup="dialog"
+        aria-controls="product-image-dialog"
+      >
+        <img id="product-detail-image" src="{{ product.primary_image() }}" alt="{{ product.nombre }}" />
+        <span class="product-detail__zoom-hint" aria-hidden="true">Pulsa para ampliar</span>
+      </button>
+      {% if product.imagenes|length > 1 %}
+        <div class="product-image-thumbnails" aria-label="Otras imágenes de {{ product.nombre }}">
+          {% for image in product.imagenes|sort(attribute='es_principal', reverse=true) %}
+            <button
+              type="button"
+              class="product-image-thumbnail {{ 'active' if image.es_principal else '' }}"
+              data-product-image="{{ image.url_imagen }}"
+              data-product-image-alt="{{ product.nombre }} — imagen {{ loop.index }}"
+              aria-label="Ver imagen {{ loop.index }} de {{ product.nombre }}"
+              aria-pressed="{{ 'true' if image.es_principal else 'false' }}"
+            >
+              <img src="{{ image.url_imagen }}" alt="" />
+            </button>
+          {% endfor %}
+        </div>
+      {% endif %}
     </div>
 
     <div class="product-detail__content">
@@ -53,6 +78,13 @@
     </div>
   </section>
 
+  <dialog class="product-image-dialog" id="product-image-dialog" aria-label="Imagen ampliada del producto">
+    <form method="dialog" class="product-image-dialog__controls">
+      <button type="submit" class="product-image-dialog__close" aria-label="Cerrar imagen ampliada">×</button>
+    </form>
+    <img id="product-image-dialog-image" src="{{ product.primary_image() }}" alt="Vista ampliada de {{ product.nombre }}" />
+  </dialog>
+
   <section class="recommendations container">
     <div class="recommendations__heading">
       <p class="eyebrow">También te puede interesar</p>
@@ -75,5 +107,34 @@
   <script>
     window.catalogData = [{{ product.to_dict() | tojson | safe }}];
     window.currencyRate = {{ currency_rate }};
+  </script>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const productImageTrigger = document.querySelector(".product-detail__zoom-trigger");
+    const productImageDialog = document.querySelector("#product-image-dialog");
+    const productDetailImage = document.querySelector("#product-detail-image");
+    const productDialogImage = document.querySelector("#product-image-dialog-image");
+
+    productImageTrigger.addEventListener("click", () => productImageDialog.showModal());
+    document.querySelectorAll(".product-image-thumbnail").forEach((thumbnail) => {
+      thumbnail.addEventListener("click", () => {
+        productDetailImage.src = thumbnail.dataset.productImage;
+        productDetailImage.alt = thumbnail.dataset.productImageAlt;
+        productDialogImage.src = thumbnail.dataset.productImage;
+        productDialogImage.alt = `Vista ampliada de ${thumbnail.dataset.productImageAlt}`;
+        document.querySelectorAll(".product-image-thumbnail").forEach((item) => {
+          const selected = item === thumbnail;
+          item.classList.toggle("active", selected);
+          item.setAttribute("aria-pressed", String(selected));
+        });
+      });
+    });
+    productImageDialog.addEventListener("click", (event) => {
+      if (event.target === productImageDialog) {
+        productImageDialog.close();
+      }
+    });
   </script>
 {% endblock %}

@@ -21,6 +21,7 @@ class Config:
         f"sqlite:///{BASE_DIR / 'caps_vnzla.db'}",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    MAX_CONTENT_LENGTH = 42 * 1024 * 1024
     CURRENCY_RATE_BS = float(os.getenv("CURRENCY_RATE_BS", "35.0"))
     SHIPPING_COST_USD = float(os.getenv("SHIPPING_COST_USD", "5.0"))
     WHATSAPP_PHONE = os.getenv("WHATSAPP_PHONE", "584122967035")

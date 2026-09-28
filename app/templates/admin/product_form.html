@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar producto' if product else 'Nuevo producto' }} | CAPS VNZLA{% endblock %}
+
+{% block content %}
+  <section class="admin-page container">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">Catálogo e inventario</p>
+        <h1>{{ 'Editar producto' if product else 'Crear producto' }}</h1>
+        <p class="lead">Personaliza la ficha, las imágenes, los colores y las colecciones del producto.</p>
+      </div>
+      <a class="secondary-button" href="{{ url_for('admin.dashboard') }}">Volver al panel</a>
+    </div>
+
+    <section class="admin-panel admin-form-card">
+      {% if error %}
+        <p class="form-message form-message--error" role="alert">{{ error }}</p>
+      {% endif %}
+      <form method="post" enctype="multipart/form-data" class="admin-form">
+        <div class="admin-form__grid">
+          <label>
+            Código
+            <input
+              name="codigo"
+              maxlength="50"
+              value="{{ form_data.get('codigo', product.codigo if product else '') if form_data else (product.codigo if product else '') }}"
+              placeholder="CAP-005"
+              required
+            />
+          </label>
+          <label>
+            Nombre del producto
+            <input
+              name="nombre"
+              maxlength="150"
+              value="{{ form_data.get('nombre', product.nombre if product else '') if form_data else (product.nombre if product else '') }}"
+              required
+            />
+          </label>
+          <label>
+            Precio USD
+            <input
+              type="number"
+              name="precio_usd"
+              min="0.01"
+              step="0.01"
+              value="{{ form_data.get('precio_usd', product.precio_usd if product else '') if form_data else (product.precio_usd if product else '') }}"
+              required
+            />
+          </label>
+          <label>
+            Costo de compra USD
+            <input
+              type="number"
+              name="costo_usd"
+              min="0.01"
+              step="0.01"
+              value="{{ form_data.get('costo_usd', product.costo_usd if product and product.costo_usd else '') if form_data else (product.costo_usd if product and product.costo_usd else '') }}"
+              placeholder="Opcional: costo unitario del proveedor"
+            />
+            <span class="field-hint">Se usa para estimar rentabilidad. Si lo dejas vacío, el margen de este producto no se contabiliza.</span>
+          </label>
+          <label>
+            Unidades disponibles
+            <input
+              type="number"
+              name="stock"
+              min="0"
+              step="1"
+              value="{{ form_data.get('stock', product.stock if product else 0) if form_data else (product.stock if product else 0) }}"
+              required
+            />
+          </label>
+          <label>
+            Categoría
+            <select name="categoria_id" required>
+              {% for category in categories %}
+                {% set categoria_seleccionada = form_data.get('categoria_id') if form_data else (product.categoria_id|string if product else '') %}
+                <option value="{{ category.id }}" {% if categoria_seleccionada == category.id|string %}selected{% endif %}>{{ category.nombre }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="admin-form__wide">
+            Descripción para la tienda
+            <textarea name="descripcion" maxlength="5000" required>{{ form_data.get('descripcion', product.descripcion if product else '') if form_data else (product.descripcion if product else '') }}</textarea>
+          </label>
+          <label class="admin-form__wide">
+            Colecciones
+            <select name="colecciones" multiple size="4">
+              {% for collection in collections %}
+                {% set colecciones_seleccionadas = form_data.getlist('colecciones') if form_data else (product.colecciones|map(attribute='id')|map('string')|list if product else []) %}
+                <option value="{{ collection.id }}" {% if collection.id|string in colecciones_seleccionadas %}selected{% endif %}>{{ collection.nombre }}{% if not collection.activa %} (retirada){% endif %}</option>
+              {% endfor %}
+            </select>
+            <span class="field-hint">Usa Ctrl (Windows) o ⌘ (Mac) para elegir varias colecciones.</span>
+          </label>
+          <label class="admin-form__wide">
+            Colores disponibles
+            <textarea name="colores" placeholder="Negro | #111111&#10;Amarillo | #ffcc00">{% if form_data %}{{ form_data.get('colores', '') }}{% elif product %}{% for color in product.colores %}{{ color.nombre }} | {{ color.codigo_hex }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}</textarea>
+            <span class="field-hint">Un color por línea, con el formato Nombre | #RRGGBB. Deja vacío si no aplica.</span>
+          </label>
+          <label class="admin-form__wide">
+            Imágenes del producto
+            <input type="file" name="imagenes" accept="image/jpeg,image/png,image/webp" multiple {% if not product %}required{% endif %} />
+            <span class="field-hint">JPEG, PNG o WebP; máximo 5 MB y 40 megapíxeles por foto, hasta 8 fotos. La primera foto nueva será la portada.</span>
+          </label>
+        </div>
+
+        {% if product and product.imagenes %}
+          <fieldset class="image-manager">
+            <legend>Galería actual</legend>
+            <div class="image-manager__grid">
+              {% for image in product.imagenes %}
+                <article class="image-manager__item">
+                  <img src="{{ image.url_imagen }}" alt="Imagen de {{ product.nombre }}" />
+                  <label class="checkbox-label">
+                    <input type="radio" name="imagen_principal" value="{{ image.id }}" {% if form_data %}{% if form_data.get('imagen_principal') == image.id|string %}checked{% endif %}{% elif image.es_principal %}checked{% endif %} />
+                    Portada
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="eliminar_imagenes" value="{{ image.id }}" {% if form_data and image.id|string in form_data.getlist('eliminar_imagenes') %}checked{% endif %} />
+                    Quitar
+                  </label>
+                </article>
+              {% endfor %}
+            </div>
+          </fieldset>
+        {% endif %}
+
+        <label class="checkbox-label">
+          <input type="checkbox" name="activo" {% if form_data %}{% if form_data.get('activo') == 'on' %}checked{% endif %}{% elif not product or product.activo %}checked{% endif %} />
+          Producto visible en la tienda
+        </label>
+
+        <div class="detail-actions">
+          <button class="cta-button" type="submit">{{ 'Guardar cambios' if product else 'Crear producto' }}</button>
+          <a class="secondary-button" href="{{ url_for('admin.dashboard') }}">Cancelar</a>
+        </div>
+      </form>
+    </section>
+  </section>
+{% endblock %}

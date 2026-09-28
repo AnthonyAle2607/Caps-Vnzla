@@ -11,6 +11,13 @@ producto_etiqueta = db.Table(
     db.Column("etiqueta_id", db.Integer, db.ForeignKey("etiquetas.id"), primary_key=True),
 )
 
+producto_coleccion = db.Table(
+    "producto_coleccion",
+    db.Column("producto_id", db.Integer, db.ForeignKey("productos.id"), primary_key=True),
+    db.Column("coleccion_id", db.Integer, db.ForeignKey("colecciones.id"), primary_key=True),
+    db.Index("ix_producto_coleccion_coleccion_id", "coleccion_id"),
+)
+
 
 class Administrador(db.Model):
     """Usuario autorizado para acceder al panel administrativo."""
@@ -48,7 +55,7 @@ class Pedido(db.Model):
 
 
 class PedidoItem(db.Model):
-    """Producto y cantidad congelados dentro de un pedido."""
+    """Producto, precio de venta y costo congelados dentro de un pedido."""
 
     __tablename__ = "pedido_items"
 
@@ -57,6 +64,7 @@ class PedidoItem(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey("productos.id"), nullable=False)
     nombre_producto = db.Column(db.String(150), nullable=False)
     precio_usd = db.Column(db.Float, nullable=False)
+    costo_usd = db.Column(db.Float, nullable=True)
     cantidad = db.Column(db.Integer, nullable=False)
     producto = db.relationship("Producto", lazy=True)
 
@@ -79,7 +87,7 @@ class MovimientoStock(db.Model):
 
 
 class Coleccion(db.Model):
-    """Representa una colección comercial visible en la tienda."""
+    """Representa una colección comercial y los productos que la integran."""
 
     __tablename__ = "colecciones"
 
@@ -90,6 +98,12 @@ class Coleccion(db.Model):
     imagen_url = db.Column(db.String(255), nullable=False)
     activa = db.Column(db.Boolean, nullable=False, default=True)
     orden = db.Column(db.Integer, nullable=False, default=0)
+    productos = db.relationship(
+        "Producto",
+        secondary=producto_coleccion,
+        back_populates="colecciones",
+        lazy="select",
+    )
 
     def to_dict(self) -> dict:
         """Devuelve los datos públicos de la colección."""
@@ -163,6 +177,7 @@ class Producto(db.Model):
     nombre = db.Column(db.String(150), nullable=False)
     descripcion = db.Column(db.Text, nullable=False)
     precio_usd = db.Column(db.Float, nullable=False)
+    costo_usd = db.Column(db.Float, nullable=True)
     stock = db.Column(db.Integer, nullable=False, default=0)
     activo = db.Column(db.Boolean, default=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey("categorias.id"), nullable=False)
@@ -183,6 +198,12 @@ class Producto(db.Model):
         back_populates="producto",
         cascade="all, delete-orphan",
         lazy=True,
+    )
+    colecciones = db.relationship(
+        "Coleccion",
+        secondary=producto_coleccion,
+        back_populates="productos",
+        lazy="select",
     )
 
     def primary_image(self) -> str:
@@ -205,6 +226,7 @@ class Producto(db.Model):
             "categoria_id": self.categoria_id,
             "imagen": self.primary_image(),
             "slug": self.codigo.lower().replace(" ", "-"),
+            "colecciones": [coleccion.nombre for coleccion in self.colecciones],
             "etiquetas": [etiqueta.nombre for etiqueta in self.etiquetas],
             "colores": [
                 {"nombre": color.nombre, "codigo_hex": color.codigo_hex}

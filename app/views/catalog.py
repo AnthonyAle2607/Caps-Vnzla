@@ -24,14 +24,29 @@ def index() -> str:
     categories = Categoria.query.order_by(Categoria.nombre).all()
     products = Producto.query.filter_by(activo=True).order_by(Producto.id).all()
     collections = Coleccion.query.filter_by(activa=True).order_by(Coleccion.orden).all()
-    products_json = json.dumps([product.to_dict() for product in products])
-
     return render_template(
         "catalog/index.html",
         categories=categories,
         products=products,
-        products_json=products_json,
+        products_json=[product.to_dict() for product in products],
         collections=collections,
+        currency_rate=current_app.config["CURRENCY_RATE_BS"],
+    )
+
+
+@catalog_bp.route("/coleccion/<string:slug>")
+def collection_detail(slug: str) -> str:
+    """Muestra los productos activos de una colección en su propia página."""
+    collection = Coleccion.query.filter_by(slug=slug, activa=True).first_or_404()
+    products = sorted(
+        (product for product in collection.productos if product.activo),
+        key=lambda product: product.nombre.casefold(),
+    )
+    return render_template(
+        "catalog/collection_detail.html",
+        collection=collection,
+        products=products,
+        products_json=[product.to_dict() for product in products],
         currency_rate=current_app.config["CURRENCY_RATE_BS"],
     )
 
@@ -145,6 +160,7 @@ def checkout():
                 producto_id=product.id,
                 nombre_producto=product.nombre,
                 precio_usd=product.precio_usd,
+                costo_usd=product.costo_usd,
                 cantidad=quantity,
             )
         )

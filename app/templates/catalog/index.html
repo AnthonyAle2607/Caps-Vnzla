@@ -3,7 +3,7 @@
 {% block title %}Catálogo | CAPS VNZLA{% endblock %}
 
 {% block content %}
-  <section class="hero container" id="inicio">
+  <section class="hero container {{ 'hero--empty' if not products else '' }}" id="inicio">
     <div class="hero__content">
       <p class="eyebrow">Colección premium</p>
       <h1>Gorras que marcan presencia.</h1>
@@ -15,21 +15,23 @@
         <a href="#shop" class="secondary-button">Ver colecciones</a>
       </div>
       <ul class="hero__stats">
-        <li><strong>2.4k+</strong><span>Compras</span></li>
-        <li><strong>24h</strong><span>Envío</span></li>
-        <li><strong>4.9/5</strong><span>Valoración</span></li>
+        <li><strong>{{ products|length }}</strong><span>Modelos disponibles</span></li>
+        <li><strong>{{ collections|length }}</strong><span>Colecciones</span></li>
+        <li><strong>Venezuela</strong><span>Envíos coordinados</span></li>
       </ul>
     </div>
 
-    <div class="hero__visual" aria-label="Imagen promocional de gorras">
-      <div class="hero-card hero-card--main">
-        <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logo de CAPS VNZLA" />
+    {% if products %}
+      <div class="hero__visual" aria-label="Selección de gorras CAPS VNZLA">
+        <div class="hero-card hero-card--main">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo de CAPS VNZLA" />
+        </div>
+        <div class="hero-card hero-card--small">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="" />
+          <div><p>Estilo con identidad</p><strong>CAPS VNZLA</strong></div>
+        </div>
       </div>
-      <div class="hero-card hero-card--small">
-        <p>Nuevo drop</p>
-        <strong>StreetWear</strong>
-      </div>
-    </div>
+    {% endif %}
   </section>
 
   <section class="catalog container" id="catalog">
@@ -39,8 +41,9 @@
         <h2>Explora la colección</h2>
       </div>
       <label class="search-box" for="catalog-search">
-        <span>Buscar</span>
-        <input id="catalog-search" type="search" placeholder="Nombre del producto" />
+        <span>Buscar productos</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
+        <input id="catalog-search" type="search" placeholder="Busca tu próximo estilo" />
       </label>
     </div>
 
@@ -94,13 +97,27 @@
     <p>Descubre piezas creadas para acompañar tu estilo todos los días.</p>
     <div class="collection-grid">
       {% for collection in collections %}
+        {% set productos_coleccion = collection.productos|selectattr('activo')|list %}
         <article class="collection-card">
-          <img src="{{ collection.imagen_url }}" alt="{{ collection.nombre }}" />
+          <a class="collection-card__image-link" href="{{ url_for('catalog.collection_detail', slug=collection.slug) }}" aria-label="Explorar {{ collection.nombre }}">
+            <img src="{{ collection.imagen_url }}" alt="{{ collection.nombre }}" />
+            <span class="collection-card__count">{{ productos_coleccion|length }} diseños</span>
+          </a>
           <div class="collection-card__body">
             <p class="product-card__category">Caps Vnzla</p>
-            <h3>{{ collection.nombre }}</h3>
+            <h3><a href="{{ url_for('catalog.collection_detail', slug=collection.slug) }}">{{ collection.nombre }}</a></h3>
             <p>{{ collection.descripcion }}</p>
-            <a class="secondary-button" href="#catalog">Explorar colección</a>
+            {% if productos_coleccion %}
+              <ul class="collection-card__products" aria-label="Productos de {{ collection.nombre }}">
+                {% for product in productos_coleccion[:4] %}
+                  <li><a href="{{ url_for('catalog.product_detail', producto_id=product.id) }}">{{ product.nombre }}</a></li>
+                {% endfor %}
+                {% if productos_coleccion|length > 4 %}
+                  <li>Y {{ productos_coleccion|length - 4 }} productos más</li>
+                {% endif %}
+              </ul>
+            {% endif %}
+            <a class="secondary-button" href="{{ url_for('catalog.collection_detail', slug=collection.slug) }}">Ver colección</a>
           </div>
         </article>
       {% endfor %}
@@ -115,7 +132,7 @@
   </section>
 
 <script>
-  window.catalogData = {{ products_json | safe }};
+  window.catalogData = {{ products_json | tojson }};
   window.currencyRate = {{ currency_rate }};
 </script>
 {% endblock %}

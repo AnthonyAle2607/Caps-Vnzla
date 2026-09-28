@@ -5,68 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="CAPS VNZLA - Catalogo premium de gorras urbanas." />
     <title>{% block title %}CAPS VNZLA{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='202609241930') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='202609281800') }}" />
   </head>
-  <body>
+  <body class="{{ 'admin-layout' if request.path.startswith('/admin/') else '' }}">
     <header class="site-header">
-      <nav class="nav container" aria-label="Navegación principal">
-        <a href="{{ url_for('catalog.index') }}#inicio" class="brand" aria-label="Ir al inicio">
-          <img class="brand-logo" src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logo de CAPS VNZLA" />
-          <span>CAPS VNZLA</span>
-        </a>
-
-        <ul class="nav-links" aria-label="Menú principal">
-          <li><a href="{{ url_for('catalog.index') }}#catalog">Catálogo</a></li>
-          <li><a href="{{ url_for('catalog.index') }}#inicio">Novedades</a></li>
-          <li><a href="{{ url_for('catalog.index') }}#shop">Colecciones</a></li>
-          <li><a href="{{ url_for('catalog.index') }}#contact">Contacto</a></li>
-        </ul>
-
-        <div class="nav-actions">
-          <div class="currency-switcher" aria-label="Cambio de moneda">
-            <button type="button" class="currency-btn active" data-currency="USD">USD</button>
-            <button type="button" class="currency-btn" data-currency="BS">BS</button>
+      {% if request.path.startswith('/admin/') and session.get('admin_id') %}
+        <nav class="nav admin-topbar container" aria-label="Barra administrativa">
+          <a href="{{ url_for('catalog.index') }}" class="brand" aria-label="Volver a la tienda CAPS VNZLA">
+            <img class="brand-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo de CAPS VNZLA" />
+            <span class="brand-copy"><strong>CAPS VNZLA</strong><small>Panel de administración</small></span>
+          </a>
+          <div class="admin-topbar__actions">
+            <span class="admin-topbar__identity"><span class="admin-topbar__indicator"></span>Sesión segura</span>
+            <a class="admin-topbar__store" href="{{ url_for('catalog.index') }}">Ver tienda ↗</a>
+            <a class="admin-topbar__logout" href="{{ url_for('admin.logout') }}">Cerrar sesión</a>
           </div>
-          <button type="button" class="cart-toggle" id="cart-toggle" aria-label="Abrir carrito de compras">
-            <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20.5 8H6.2M10 20a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm9 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
-            </svg>
-            <span class="cart-label">Carrito</span>
-            <span id="cart-count">0</span>
-          </button>
-        </div>
-      </nav>
+        </nav>
+      {% else %}
+        <nav class="nav container" aria-label="Navegación principal">
+          <a href="{{ url_for('catalog.index') }}#inicio" class="brand" aria-label="Ir al inicio">
+            <img class="brand-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo de CAPS VNZLA" />
+            <span class="brand-copy"><strong>CAPS VNZLA</strong><small>Gorras · Estilo · Identidad</small></span>
+          </a>
+
+          {% if not request.path.startswith('/admin/') %}
+            <button
+              type="button"
+              class="mobile-menu-toggle"
+              id="mobile-menu-toggle"
+              aria-label="Abrir menú de navegación"
+              aria-controls="store-navigation"
+              aria-expanded="false"
+            >
+              <span></span><span></span><span></span>
+            </button>
+          {% endif %}
+
+          <ul class="nav-links" id="store-navigation" aria-label="Menú principal">
+            <li><a href="{{ url_for('catalog.index') }}#catalog">Catálogo</a></li>
+            <li><a href="{{ url_for('catalog.index') }}#inicio">Novedades</a></li>
+            <li><a href="{{ url_for('catalog.index') }}#shop">Colecciones</a></li>
+            <li><a href="{{ url_for('catalog.index') }}#contact">Contacto</a></li>
+          </ul>
+
+          <div class="nav-actions">
+            <div class="currency-switcher" aria-label="Cambio de moneda">
+              <button type="button" class="currency-btn active" data-currency="USD">USD</button>
+              <button type="button" class="currency-btn" data-currency="BS">BS</button>
+            </div>
+            <button type="button" class="cart-toggle" id="cart-toggle" data-cart-open aria-label="Abrir carrito de compras">
+              <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20.5 8H6.2M10 20a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm9 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
+              </svg>
+              <span class="cart-label">Carrito</span>
+              <span id="cart-count">0</span>
+            </button>
+          </div>
+        </nav>
+      {% endif %}
     </header>
 
-    <main class="page-shell">
-      {% block content %}{% endblock %}
-    </main>
+    {% set admin_session = request.path.startswith('/admin/') and session.get('admin_id') %}
+    {% if admin_session %}
+      <div class="admin-shell">
+        <aside class="admin-sidebar" aria-label="Menú de administración">
+          <p class="admin-sidebar__caption">Administración</p>
+          <a class="admin-sidebar__link {{ 'active' if request.endpoint == 'admin.dashboard' else '' }}" href="{{ url_for('admin.dashboard') }}"><span>⌂</span>Resumen</a>
+          <a class="admin-sidebar__link {{ 'active' if request.endpoint == 'admin.sales_dashboard' else '' }}" href="{{ url_for('admin.sales_dashboard') }}"><span>↗</span>Análisis de ventas</a>
+          <p class="admin-sidebar__caption">Tu tienda</p>
+          <a class="admin-sidebar__link {{ 'active' if request.endpoint in ['admin.dashboard', 'admin.create_product', 'admin.edit_product'] else '' }}" href="{{ url_for('admin.dashboard') }}#productos"><span>▦</span>Productos e inventario</a>
+          <a class="admin-sidebar__link {{ 'active' if request.endpoint in ['admin.manage_collections', 'admin.edit_collection'] else '' }}" href="{{ url_for('admin.manage_collections') }}"><span>◈</span>Colecciones</a>
+          <p class="admin-sidebar__caption">Operaciones</p>
+          <a class="admin-sidebar__link {{ 'active' if request.endpoint == 'admin.orders' else '' }}" href="{{ url_for('admin.orders') }}"><span>▤</span>Pedidos</a>
+          <a class="admin-sidebar__link {{ 'active' if request.endpoint == 'admin.stock_movements' else '' }}" href="{{ url_for('admin.stock_movements') }}"><span>⟳</span>Movimientos de stock</a>
+          <div class="admin-sidebar__foot"><span>Sesión protegida</span><strong>CAPS VNZLA</strong></div>
+        </aside>
+    {% endif %}
+    <main class="page-shell {{ 'admin-main' if admin_session else '' }}">{% block content %}{% endblock %}</main>
+    {% if admin_session %}
+      </div>
+    {% endif %}
 
-    <aside class="cart-panel" id="cart-panel" aria-live="polite" aria-label="Carrito de compras">
+    {% if not request.path.startswith('/admin/') %}
+      <aside class="cart-panel" id="cart-panel" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="cart-heading" tabindex="-1" inert>
       <div class="cart-panel__header">
-        <h3>Tu carrito</h3>
+        <div><p class="eyebrow">Tu selección</p><h3 id="cart-heading">Carrito de compras</h3></div>
         <button type="button" class="close-cart" id="close-cart" aria-label="Cerrar carrito">×</button>
       </div>
 
       <div id="cart-items" class="cart-items"></div>
 
-      <div class="cart-summary">
-        <div class="summary-row">
-          <span>Subtotal</span>
-          <strong id="subtotal-display">$0.00</strong>
+      <div class="cart-panel__footer">
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong id="subtotal-display">$0.00</strong>
+          </div>
+          <div class="summary-row emphasis">
+            <span>Total</span>
+            <strong id="total-display">$0.00</strong>
+          </div>
         </div>
-        <div class="summary-row emphasis">
-          <span>Total</span>
-          <strong id="total-display">$0.00</strong>
-        </div>
+        <p class="cart-shipping-note">El costo de envío se confirma al coordinar tu pedido.</p>
+        <button type="button" class="cta-button full-width" id="checkout-button">Continuar con mi pedido <span aria-hidden="true">→</span></button>
       </div>
+      </aside>
 
-      <button type="button" class="cta-button full-width" id="checkout-button">Procesar pedido</button>
-    </aside>
+      <div class="overlay" id="cart-overlay" aria-hidden="true"></div>
+      <div class="mobile-cart-bar">
+        <span class="mobile-cart-bar__summary"><strong data-mobile-cart-count>0 artículos</strong><small>Ver el resumen de tu compra</small></span>
+        <button type="button" class="mobile-cart-bar__button" data-cart-open aria-label="Abrir carrito de compras">
+          <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20.5 8H6.2M10 20a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm9 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" /></svg>
+          <span>Carrito</span><span class="mobile-cart-bar__count" data-mobile-cart-count>0</span>
+        </button>
+      </div>
+    {% endif %}
 
-    <div class="overlay" id="cart-overlay"></div>
-
-    <script src="{{ url_for('static', filename='js/catalog.js', v='202609241931') }}"></script>
+    <script src="{{ url_for('static', filename='js/catalog.js', v='202609281755') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

@@ -11,10 +11,10 @@ from werkzeug.security import generate_password_hash
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
-from app.config import Config
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+
+from app.config import Config
 
 # Instancias compartidas de base de datos y migraciones usadas por la aplicación.
 db = SQLAlchemy()
@@ -25,7 +25,7 @@ def create_app() -> Flask:
     """Crea y configura la aplicación Flask.
 
     La fábrica centraliza la configuración, permite pruebas con ajustes
-    personalizados y garantiza que el esquema exista antes de atender solicitudes.
+        personalizados. El esquema de producción se gestiona mediante migraciones.
     """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
@@ -49,8 +49,9 @@ def create_app() -> Flask:
     app.register_blueprint(admin_bp)
 
     with app.app_context():
-        db.create_all()
-        seed_data()
+            if db.engine.url.get_backend_name() == "sqlite":
+                db.create_all()
+                seed_data()
 
     return app
 
@@ -58,6 +59,9 @@ def create_app() -> Flask:
 def seed_data() -> None:
     """Carga datos iniciales cuando la base de datos aún no tiene catálogo."""
     from app.models import Administrador, Categoria, ColorProducto, Coleccion, ImagenProducto, Producto
+
+    catalogo_nuevo = Producto.query.first() is None
+    colecciones_nuevas = Coleccion.query.first() is None
 
     if Administrador.query.first() is None:
         db.session.add(
@@ -88,8 +92,8 @@ def seed_data() -> None:
             "stock": 18,
             "categoria_id": 1,
             "imagenes": [
-                ("https://images.unsplash.com/photo-1521369909026-2afc912d5f37?auto=format&fit=crop&w=900&q=80", True),
-                ("https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80", False),
+                ("/static/img/IMG_9684.jpg", True),
+                ("/static/img/IMG_9688.jpg", False),
             ],
         },
         {
@@ -100,8 +104,8 @@ def seed_data() -> None:
             "stock": 12,
             "categoria_id": 2,
             "imagenes": [
-                ("https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80", True),
-                ("https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80", False),
+                ("/static/img/IMG_9690.jpg", True),
+                ("/static/img/IMG_9684.jpg", False),
             ],
         },
         {
@@ -112,8 +116,8 @@ def seed_data() -> None:
             "stock": 9,
             "categoria_id": 3,
             "imagenes": [
-                ("https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80", True),
-                ("https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80", False),
+                ("/static/img/IMG_9689.jpg", True),
+                ("/static/img/IMG_9688.jpg", False),
             ],
         },
         {
@@ -124,8 +128,8 @@ def seed_data() -> None:
             "stock": 7,
             "categoria_id": 1,
             "imagenes": [
-                ("https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80", True),
-                ("https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=900&q=80", False),
+                ("/static/img/IMG_9688.jpg", True),
+                ("/static/img/IMG_9690.jpg", False),
             ],
         },
         ]
@@ -161,25 +165,38 @@ def seed_data() -> None:
                     nombre="Urban Essentials",
                     slug="urban-essentials",
                     descripcion="Gorras de líneas limpias y actitud callejera para el uso diario.",
-                    imagen_url="https://images.unsplash.com/photo-1521369909026-2afc912d5f37?auto=format&fit=crop&w=900&q=80",
+                    imagen_url="/static/img/IMG_9684.jpg",
                     orden=1,
                 ),
                 Coleccion(
                     nombre="Classic Black",
                     slug="classic-black",
                     descripcion="Diseños sobrios con detalles premium para un estilo atemporal.",
-                    imagen_url="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
+                    imagen_url="/static/img/IMG_9690.jpg",
                     orden=2,
                 ),
                 Coleccion(
                     nombre="Team Spirit",
                     slug="team-spirit",
                     descripcion="Piezas deportivas para llevar los colores de tu equipo y tu identidad.",
-                    imagen_url="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+                    imagen_url="/static/img/IMG_9689.jpg",
                     orden=3,
                 ),
             ]
         )
+        db.session.commit()
+
+    if catalogo_nuevo or colecciones_nuevas:
+        colecciones_por_categoria = {
+            "urban": "urban-essentials",
+            "classic": "classic-black",
+            "team": "team-spirit",
+        }
+        for producto in Producto.query.all():
+            slug_coleccion = colecciones_por_categoria.get(producto.categoria.slug)
+            coleccion = Coleccion.query.filter_by(slug=slug_coleccion).first() if slug_coleccion else None
+            if coleccion and coleccion not in producto.colecciones:
+                producto.colecciones.append(coleccion)
         db.session.commit()
 
     if ColorProducto.query.first() is None:
