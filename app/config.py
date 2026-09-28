@@ -10,6 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 def _normalize_database_url(database_url: str) -> str:
     """Selecciona el driver psycopg 3 instalado para las URLs PostgreSQL."""
+    database_url = database_url.strip()
     if database_url.startswith("postgres://"):
         return database_url.replace("postgres://", "postgresql+psycopg://", 1)
     if database_url.startswith("postgresql://"):
